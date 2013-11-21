@@ -1,0 +1,26 @@
+[PROJECT]
+Target=C:\Users\user\Documents\PIC\i2cwhatever.hex
+Development_Mode=
+Processor_Text=PIC16F883
+ToolSuite=CCS
+Processor=0x883F
+[C:\Users\user\Documents\PIC\i2cwhatever]
+Type=4
+Path=
+FileList=
+BuildTool=
+OptionString=
+AdditionalOptionString=
+[mru-list]
+1=C:\Users\user\Documents\PIC\i2cwhatever.c
+[Windows]
+0=0000 %S 0 0 796 451 3 0
+[Units]
+Link=0
+Count=1
+1=C:\Users\user\Documents\PIC\i2cwhatever
+[Opened Files]
+1=i2cwhatever.c
+2=
+3=
+4=
