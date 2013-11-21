@@ -3,8 +3,8 @@
 #include <16F883.h>
 #device adc=16
 
-#define I2C_CMND_RD 1
-#define I2C_CMND_WR 0
+#define I2C_CMND_RD 0
+#define I2C_CMND_WR 1
 
 
 // #FUSES NOWDT                    //No Watch Dog Timer
@@ -44,7 +44,15 @@ void main()
       temp1 = i2c_read(0);
       volts = ((temp0 & 0x7F)<<3) + ((temp1>>5) & 0x07); //0x07
       i2c_stop();
-            
+      
+      //i2c_write(addr<<1 +0b0);
+      //output_low(LED);
+      //i2c_write(reg);
+      //i2c_start();
+      //i2c_write(addr<<1 + 0b1); //R/W bit now = 1
+      //temp = i2c_read(0);
+      //i2c_stop();
+      
       putc(volts);
       delay_ms(200);
    }
