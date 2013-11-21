@@ -7,8 +7,8 @@
 #define I2C_CMND_WR 0
 
 
-// #FUSES NOWDT                    //No Watch Dog Timer
-#FUSES HS                       //High speed Osc (> 4mhz for PCM/PCH) (>10mhz for PCD)
+#FUSES NOWDT                    //No Watch Dog Timer
+#FUSES INTRC                    //Internal Oscillator
 #FUSES NOBROWNOUT               //No brownout reset
 #FUSES NOLVP                    //No low voltage prgming, B3(PIC16) or B5(PIC18) used for I/O
 #define LED PIN_A1
@@ -26,12 +26,12 @@ void main()
    unsigned int8 addr = 0x06; //all represent address, except last bit, which is read(0)/write(1) <- varies depending on datasheet for chip
    
    setup_comparator(NC_NC_NC_NC);// This device COMP currently not supported by the PICWizard
-   setup_oscillator(OSC_8MHZ);
+   setup_oscillator(OSC_8MHZ);   //
    
    while(1){
       //led blinking
       output_high(LED);
-      delay_ms(200);
+      delay_ms(1000);
       
       i2c_start();
       
@@ -46,8 +46,7 @@ void main()
       i2c_stop();
             
       putc(volts);
-      delay_ms(200);
+      output_low(LED);
+      delay_ms(1000);
    }
 }
-
-

@@ -1,0 +1,24 @@
+[PROJECT]
+Target=C:\Users\user\Documents\GitHub\MacEngSolarBatteryProtection2014\VoltageSensorTest.hex
+Development_Mode=
+Processor_Text=PIC16F883
+ToolSuite=CCS
+Processor=0x883F
+[C:\Users\user\Documents\GitHub\MacEngSolarBatteryProtection2014\VoltageSensorTest]
+Type=4
+Path=
+FileList=
+BuildTool=
+OptionString=
+AdditionalOptionString=
+[mru-list]
+1=C:\Users\user\Documents\GitHub\MacEngSolarBatteryProtection2014\VoltageSensorTest.c
+[Windows]
+0=0000 %S 0 0 796 451 3 0
+[Units]
+Link=0
+Count=1
+1=C:\Users\user\Documents\GitHub\MacEngSolarBatteryProtection2014\VoltageSensorTest
+[Opened Files]
+1=VoltageSensorTest.c
+2=
