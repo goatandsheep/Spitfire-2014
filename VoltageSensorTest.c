@@ -33,6 +33,7 @@ void main()
       output_high(LED);
       delay_ms(1000);
       
+      
       i2c_start();
       
       i2c_write((addr<<1) + I2C_CMND_WR); //write = 0
@@ -46,6 +47,8 @@ void main()
       i2c_stop();
             
       putc(volts);
+      putc(0xab);
+      //printf("eat chicken");
       output_low(LED);
       delay_ms(1000);
    }
