@@ -14,7 +14,7 @@
 #define LED PIN_A1
 
 #use delay(clock=8000000)
-#use rs232(baud=9600,parity=N,xmit=PIN_C6,rcv=PIN_C7,bits=8,stream=PORT1)
+#use rs232(baud=19200,parity=N,xmit=PIN_C6,rcv=PIN_C7,bits=8,stream=PORT1)
 #use i2c(master,sda=PIN_C4,scl = PIN_C3)
 
 void main()
@@ -45,10 +45,10 @@ void main()
       temp1 = i2c_read(0);
       volts = ((temp0 & 0x7F)<<3) + ((temp1>>5) & 0x07); //0x07
       i2c_stop();
-            
-      putc(volts);
-      putc(0xab);
-      //printf("eat chicken");
+      
+      //putc
+      printf("one: %02x, two: %02x\n\r", temp0, temp1);
+      printf("Volt = %ld\n\r", volts); //in this context, int16 is long
       output_low(LED);
       delay_ms(1000);
    }
