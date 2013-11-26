@@ -23,7 +23,8 @@ void main()
    unsigned int16 volts;
    unsigned int8 temp0;
    unsigned int8 temp1;
-   unsigned int8 addr = 0x06; //all represent address, except last bit, which is read(0)/write(1) <- varies depending on datasheet for chip
+   unsigned int8 addr = 0x07; // slave device address
+   unsigned int8 cmd = 0x18; // 0x18 read command for temp sensor
    
    setup_comparator(NC_NC_NC_NC);// This device COMP currently not supported by the PICWizard
    setup_oscillator(OSC_8MHZ);   //
@@ -37,7 +38,7 @@ void main()
       i2c_start();
       
       i2c_write((addr<<1) + I2C_CMND_WR); //write = 0
-      i2c_write(0x0C); //command
+      i2c_write(cmd);
       
       i2c_start();   //change in data flow direction
       i2c_write((addr<<1) + I2C_CMND_RD); //read = 1
