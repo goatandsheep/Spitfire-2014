@@ -3,6 +3,9 @@
 #include <16F883.h>
 #device adc=16
 
+#define CMND_RD_VOLT 0x0C
+#define CMND_RD_TEMP 0x18
+
 #define I2C_CMND_RD 1
 #define I2C_CMND_WR 0
 
@@ -15,7 +18,7 @@
 
 #use delay(clock=8000000)
 #use rs232(baud=19200,parity=N,xmit=PIN_C6,rcv=PIN_C7,bits=8,stream=PORT1)
-#use i2c(master,sda=PIN_C4,scl = PIN_C3)
+#use i2c(master,fast,sda=PIN_C4,scl = PIN_C3)
 
 void main()
 {
@@ -23,8 +26,7 @@ void main()
    unsigned int16 volts;
    unsigned int8 temp0;
    unsigned int8 temp1;
-   unsigned int8 addr = 0x07; // slave device address
-   unsigned int8 cmd = 0x18; // 0x18 read command for temp sensor
+   unsigned int8 addr = 0x06; // slave device address
    
    setup_comparator(NC_NC_NC_NC);// This device COMP currently not supported by the PICWizard
    setup_oscillator(OSC_8MHZ);   //
@@ -32,25 +34,27 @@ void main()
    while(1){
       //led blinking
       output_high(LED);
-      delay_ms(1000);
+      delay_ms(100);
       
       
       i2c_start();
       
       i2c_write((addr<<1) + I2C_CMND_WR); //write = 0
-      i2c_write(cmd);
+      i2c_write(CMND_RD_VOLT);
       
       i2c_start();   //change in data flow direction
-      i2c_write((addr<<1) + I2C_CMND_RD); //read = 1
+      i2c_write((addr << 1) + I2C_CMND_RD); //read = 1
       temp0 = i2c_read(0);
       temp1 = i2c_read(0);
-      volts = ((temp0 & 0x7F)<<3) + ((temp1>>5) & 0x07); //0x07
       i2c_stop();
       
+      volts = (((unsigned int16)(temp0) & 0x7F) << 3) + (((unsigned int16)(temp1) >> 5) & 0x07); //0x07
+      
+      
       //putc
-      printf("one: %02x, two: %02x\n\r", temp0, temp1);
+      printf("one: %02X, two: %02X\n\r", temp0, temp1);
       printf("Volt = %ld\n\r", volts); //in this context, int16 is long
       output_low(LED);
-      delay_ms(1000);
+      delay_ms(100);
    }
 }
