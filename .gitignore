@@ -42,6 +42,7 @@
 .DS_Store
 .DS_Store?
 ._*
+.~lock*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
