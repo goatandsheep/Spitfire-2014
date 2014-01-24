@@ -1,6 +1,5 @@
 /*
- the purpose of this code is to acquire serial packets from a pc, convert and send it via CANBus and vice versa
- *in the working*
+ This is example code for a TRANSMITTING node
  
 the following is available at the CCS Index:
 
@@ -90,7 +89,7 @@ can_getd(ID,data,len,stat);
  // “data', the number of data bytes in len, and statistics
  // about the data in the stat structure.
  
- ////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 //
 // can_putd()
 //
@@ -98,40 +97,21 @@ can_getd(ID,data,len,stat);
 // send when the CAN bus becomes available.
 //
 //    Paramaters:
-//       id - ID to transmit data as
-//          enumerated as - RXB0ID,RXB1ID,B0ID,B1ID,B2ID,B3ID,B4ID,B5ID
-//       data - pointer to data to send
-//       len - length of data to send
-//       priority - priority of message.  The higher the number, the
+//       uint32 id - ID to transmit data as enumerated as:
+//		     RXB0ID,RXB1ID,B0ID,B1ID,B2ID,B3ID,B4ID,B5ID
+//       int8* data - pointer to data to send
+//       int8 len - length of data to send
+//       int8 priority - priority of message.  The higher the number, the
 //                  sooner the CAN peripheral will send the message.
 //                  Numbers 0 through 3 are valid.
-//       ext - TRUE to use an extended ID, FALSE if not
-//       rtr - TRUE to set the RTR (request) bit in the ID, false if NOT
+//       int1 ext - TRUE to use an extended ID, FALSE if not
+//       int 1rtr - TRUE to set the RTR (request) bit in the ID, false if NOT
 //
 //    Returns:
 //       If successful, it will return TRUE
 //       If un-successful, will return FALSE
 //
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-//
-// can_getd()
-//
-// Gets data from a receive buffer, if the data exists
-//
-//    Parameters:
-//      id - ID who sent message
-//      data - pointer to array of data
-//      len - length of received data
-//      stat - structure holding some information (such as which buffer
-//             recieved it, ext or standard, etc)
-//
-//    Returns:
-//      Function call returns a TRUE if there was data in a RX buffer, FALSE
-//      if there was none.
-//
-////////////////////////////////////////////////////////////////////////
- 
+//////////////////////////////////////////////////////////////////////// 
 */
 
 #include <18F26K80.h>
@@ -161,17 +141,9 @@ int16 ms;
 void isr_timer2(void) {
    ms++; //keep a running timer interupt that increments every milli-second
 }
-//int bintodec(int value);
 void main() {
-   
-   //Use local receive structure for polling receive
-   struct rx_stat rxstat;
-   int32 rx_id;
-   int in_data[8];
-   int rx_len;
-   
    //Send a single packet from listed tx_id
-   int out_data[8] = {0,100,200,3,4,5,6,7};
+   unsigned int8 out_data[8] = {0,100,200,3,4,5,6,7};
    int32 tx_id = 0x002;
    int1 tx_rtr = 0;
    int1 tx_ext = 0;
@@ -179,7 +151,6 @@ void main() {
    int tx_pri = 3;
 
    int i;
-   int counter = 0;
    
    // data fields have 8 integer slots, each slot is a byte for a total of 8 bytes,
    // the PUTD and GETD function will automatically convert each integer to binary
@@ -187,8 +158,6 @@ void main() {
    // the binary value back to an integer prior to data processing
    // max integer value per byte => 2**8 = 256 resulting in any integer number from 0...255
    
-   //in_data = {0,100,200,3,4,5,6,7}; 
-   //out_data = {0,0,0,3,4,5,6,7};
 
    setup_timer_2(T2_DIV_BY_4,79,16);   //setup up timer2 to interrupt every 1ms if using 20Mhz clock
 
@@ -196,100 +165,39 @@ void main() {
    set_tris_b((*0xF93 & 0xFB ) | 0x08);   //b3 is out, b2 is in (default)
    //TRISB = 00100000; // b2 = input, b3 = output, replacement for live above
    //set_tris_c((*0xF94 & 0xBF) | 0x80);  //c6 is out, c7 is in (if using #FUSES CANC)
-   //can_set_mode(CAN_OP_LOOPBACK); //Only use for loopback testing
    
    //enable_interrupts(INT_CANRX1);   //enable CAN FIFO receive interrupt
    enable_interrupts(INT_TIMER2);   //enable timer2 interrupt (if want to count ms)
    enable_interrupts(GLOBAL);       //enable all interrupts
 
-   while(TRUE)
-   {
-      /*
-      output_high(RTS);
-      //This is the polling receive routine (works)
-      if ( can_kbhit() )   //if data is waiting in buffer...
-      {
+   while(TRUE) {
+   	  //every two seconds, send new data if transmit buffer is empty
+      if (can_tbe() && (ms > 2000)) {
+         // resets the timer interupt
+         ms=0;
          
-         if(can_getd(rx_id, in_data, rx_len, rxstat)) 
-         { //...then get data from buffer, and place it into the fields: rx_id, in_data, rx_len... etc
-            printf("\r\nRECIEVED: BUFF=%U ID=%3LX LEN=%U OVF=%U ", rxstat.buffer, rx_id, rx_len, rxstat.err_ovfl);
-            printf("FILT=%U RTR=%U EXT=%U INV=%U", rxstat.filthit, rxstat.rtr, rxstat.ext, rxstat.inv);
-            printf("\r\n    DATA = ");
-            for (i=0;i<rx_len;i++) 
-            {
-               printf("%X ",in_data[i]);
-            }
-            printf("\r\n");
-         }
-         else 
-         {
-            printf("\r\nFAIL on can_getd\r\n");
-         }
-      }
-      */
-      
-      // Serial data from PC
-      /*
-      if(kbhit()) // if serial buffer contains data
-      {
-         out_data = fgetc();  //get data stream from serial buffer (USB)
-         // if can buffer is empty
-         if(can_tbe())
-         {
-            if (i != 0xFF) 
-         { //if i != 0xFF then success, a transmit buffer was open
-            printf("\r\nSENT %U: ID=%3LX LEN=%U ", i, tx_id, tx_len);
-            printf("PRI=%U EXT=%U RTR=%U\r\n   DATA = ", tx_pri, tx_ext, tx_rtr);
-            for (i=0;i<tx_len;i++) 
-            {
-               printf("%X ",out_data[i]);
-            }
-            printf("\r\n");
-         }
-         else 
-         { //fail, no transmit buffer was open
-            printf("\r\nFAIL on can_putd\r\n");
-         }
-         }
-      }
-      */
-      
-      
-      //every two seconds, send new data if transmit buffer is empty
-      if ( can_tbe() && (ms > 2000) )
-      {
          // this will increment the first byte in the data frame every transmission
+         out_data[0]++;
+         
          output_toggle(LED);
-         if(counter < 255)
-         {
-            out_data[0] = counter;
-            counter++;
-         }
-         if(counter > 254)
-         {
-            counter = 0;
-         }
          
+         //put data on transmit buffer
+         i=can_putd(tx_id, out_data, tx_len, tx_pri, tx_ext, tx_rtr);
          
-         ms=0; // resets the timer interupt
-         i=can_putd(tx_id, out_data, tx_len,tx_pri,tx_ext,tx_rtr); //put data on transmit buffer
-         if (i != 0xFF) 
-         { //if i != 0xFF then success, a transmit buffer was open
+         if (i != 0xFF) { 
+         	// if i != 0xFF then success, a transmit buffer was open
             printf("\r\nSENT %U: ID=%3LX LEN=%U ", i, tx_id, tx_len);
             printf("PRI=%U EXT=%U RTR=%U\r\n   DATA = ", tx_pri, tx_ext, tx_rtr);
-            for (i=0;i<tx_len;i++) 
-            {
+            
+            for (i=0;i<tx_len;i++) {
                printf("%X ",out_data[i]);
             }
+            
             printf("\r\n");
-         }
-         else 
-         { //fail, no transmit buffer was open
+         } else { 
+            //fail, no transmit buffer was open
             printf("\r\nFAIL on can_putd\r\n");
          }
       }
-      
-      
-   }  // while(true) last bracket
-}     // main() last bracket
-
+   }
+}
