@@ -1,0 +1,22 @@
+Hall effect sensor calibration:
+Sensor measurement range:
+Sensor output range: 
+
+formula experimentally determined:
+read_adc() = 680.24 * current + 32685
+
+
+
+Voltage sensor calibration:
+Sensor measurement range:  0.00V .. 4.75V
+Sensor output range: 0 .. 1024
+
+Divide value from sensor by 1024 to normalize the range to 0.0 to 1.0, then multiply by 5.0? to get the maximum voltage range from the sensor.
+
+
+
+Temperature Sensor Calibration:
+Sensor measurement range: -127°C .. 127°C
+Sensor output range: -1024 .. 1024
+
+Divide value from sensor by 1024 to normalize the range to -1.0 to 1.0, then multiply by 127? to get the maximum temperature range from the sensor. This is effectively the same as dividing by 8 or shifting 3 bits to the right, or, more simply, removing the 3 least significant bits.
