@@ -1,5 +1,5 @@
 /*
- This is example code for a RECEIVING 
+ This is example code for a RECEIVING node
  
 the following is available at the CCS Index:
 
