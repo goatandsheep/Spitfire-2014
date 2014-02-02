@@ -371,8 +371,7 @@ void can_set_mode(CAN_OP_MODE mode) {
  *
  * More information can be found in the PIC18F4580 datasheet section 23.4
  */
-void can_set_functional_mode(CAN_FUN_OP_MODE mode)
-{
+void can_set_functional_mode(CAN_FUN_OP_MODE mode) {
     curmode=CANSTAT.opmode;
 
     // Must be in config mode before params can be set
@@ -444,8 +443,7 @@ void can_set_id(int8 *addr, int32 id, int1 ext) {
  *      addr - the address that is to be set to the id
  *      id - the actual id
  */
-void can_set_standard_id(int8 *addr, int32 id)
-{
+void can_set_standard_id(int8 *addr, int32 id) {
     // eidl
     *addr=0;
 
@@ -472,8 +470,7 @@ void can_set_standard_id(int8 *addr, int32 id)
  *      addr - the address that is to be set to the id
  *      id - the actual id
  */
-void can_set_extended_id(int8 *addr, int32 id)
-{
+void can_set_extended_id(int8 *addr, int32 id) {
     // eidl
     *addr=make8(id,0);  //0:7
 
@@ -550,8 +547,7 @@ int32 can_get_id(int8 *addr, int1 ext) {
  *  Returns:
  *      The ID of the buffer
  */
-int32 can_get_extended_id(int8 *addr)
-{
+int32 can_get_extended_id(int8 *addr) {
     int32 ret;
 
     ret=*addr;  // eidl
@@ -580,8 +576,7 @@ int32 can_get_extended_id(int8 *addr)
  *  Returns:
  *      The ID of the buffer
  */
-int32 can_get_standard_id(int8 *addr)
-{
+int32 can_get_standard_id(int8 *addr) {
     int32 ret;
 
     addr-=2;    // sidl
@@ -622,62 +617,52 @@ int8 can_putd(int32 id, int8 *data, int8 len, int8 priority, int1 ext, int1 rtr)
 
     // Find emtpy transmitter
     // Map access bank addresses to empty transmitter
-    if (!TXB0CON.txreq)
-    {
+    if (!TXB0CON.txreq) {
         if(curfunmode==CAN_FUN_OP_LEGACY)
             CANCON.win=CAN_WIN_TX0;
         else
             ECANCON.ewin=TX0;
         port=0;
     }
-    else if (!TXB1CON.txreq)
-    {
+    else if (!TXB1CON.txreq) {
         if(curfunmode==CAN_FUN_OP_LEGACY)
             CANCON.win=CAN_WIN_TX1;
         else
             ECANCON.ewin=TX1;
         port=1;
     }
-    else if (!TXB2CON.txreq)
-    {
+    else if (!TXB2CON.txreq) {
         if(curfunmode==CAN_FUN_OP_LEGACY)
             CANCON.win=CAN_WIN_TX2;
         else
             ECANCON.ewin=TX2;
         port=2;
     }
-    else if (!B0CONT.txreq && BSEL0.b0txen)
-    {
+    else if (!B0CONT.txreq && BSEL0.b0txen) {
         ECANCON.ewin=TXRX0;
         port=3;
     }
-    else if (!B1CONT.txreq && BSEL0.b1txen)
-    {
+    else if (!B1CONT.txreq && BSEL0.b1txen) {
         ECANCON.ewin=TXRX1;
         port=4;
     }
-    else if (!B2CONT.txreq && BSEL0.b2txen)
-    {
+    else if (!B2CONT.txreq && BSEL0.b2txen) {
         ECANCON.ewin=TXRX2;
         port=5;
     }
-    else if (!B3CONT.txreq && BSEL0.b3txen)
-    {
+    else if (!B3CONT.txreq && BSEL0.b3txen) {
         ECANCON.ewin=TXRX3;
         port=6;
     }
-    else if (!B4CONT.txreq && BSEL0.b4txen)
-    {
+    else if (!B4CONT.txreq && BSEL0.b4txen) {
         ECANCON.ewin=TXRX4;
         port=7;
     }
-    else if (!B5CONT.txreq && BSEL0.b5txen)
-    {
+    else if (!B5CONT.txreq && BSEL0.b5txen) {
         ECANCON.ewin=TXRX5;
         port=8;
     }
-    else
-    {
+    else {
 #if CAN_DO_DEBUG
         can_debug("\r\nCAN_PUTD() FAIL: NO OPEN TX BUFFERS\r\n");
 #endif
@@ -739,13 +724,11 @@ int8 can_putd(int32 id, int8 *data, int8 len, int8 priority, int1 ext, int1 rtr)
  *      Function call returns a TRUE if there was data in a RX buffer, FALSE if
  *      there was none.
  */
-int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
-{
+int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat) {
     int8 i;
     int8 *ptr;
 
-    if (RXB0CON.rxful)
-    {
+    if (RXB0CON.rxful) {
         if(curfunmode==CAN_FUN_OP_LEGACY)
             CANCON.win=CAN_WIN_RX0;
         else
@@ -753,24 +736,20 @@ int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
 
         stat.buffer=0;
 
-        if(curfunmode)
-        {
+        if(curfunmode) {
             stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
             stat.filthit=RXB0CON_MODE_1.filthit;
         }
-        else
-        {
+        else {
             stat.err_ovfl=COMSTAT.rx0ovfl;
             COMSTAT.rx0ovfl=0;
 
-            if (RXB0CON.rxb0dben)
-            {
+            if (RXB0CON.rxb0dben) {
                 stat.filthit=RXB0CON.filthit0;
             }
         }
     }
-    else if (RXB1CON.rxful)
-    {
+    else if (RXB1CON.rxful) {
         if(curfunmode==CAN_FUN_OP_LEGACY)
             CANCON.win=CAN_WIN_RX1;
         else
@@ -778,69 +757,60 @@ int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
 
         stat.buffer=1;
 
-        if(curfunmode)
-        {
+        if(curfunmode) {
             stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
             stat.filthit=RXB1CON_MODE_1.filthit;
         }
-        else
-        {
+        else {
             stat.err_ovfl=COMSTAT.rx1ovfl;
             COMSTAT.rx1ovfl=0;
 
             stat.filthit=RXB1CON.filthit;
         }
     }
-    else if (B0CONR.rxful && !BSEL0.b0txen)
-    {
+    else if (B0CONR.rxful && !BSEL0.b0txen) {
         ECANCON.ewin=TXRX0;
         stat.buffer=2;
 
         stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
         stat.filthit=B0CONR.filhit;
     }
-    else if (B1CONR.rxful && !BSEL0.b1txen)
-    {
+    else if (B1CONR.rxful && !BSEL0.b1txen) {
         ECANCON.ewin=TXRX1;
         stat.buffer=3;
 
         stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
         stat.filthit=B1CONR.filhit;
     }
-    else if (B2CONR.rxful && !BSEL0.b2txen)
-    {
+    else if (B2CONR.rxful && !BSEL0.b2txen) {
         ECANCON.ewin=TXRX2;
         stat.buffer=4;
 
         stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
         stat.filthit=B2CONR.filhit;
     }
-    else if (B3CONR.rxful && !BSEL0.b3txen)
-    {
+    else if (B3CONR.rxful && !BSEL0.b3txen) {
         ECANCON.ewin=TXRX3;
         stat.buffer=5;
 
         stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
         stat.filthit=B3CONR.filhit;
     }
-    else if (B4CONR.rxful && !BSEL0.b4txen)
-    {
+    else if (B4CONR.rxful && !BSEL0.b4txen) {
         ECANCON.ewin=TXRX4;
         stat.buffer=6;
 
         stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
         stat.filthit=B4CONR.filhit;
     }
-    else if (B5CONR.rxful && !BSEL0.b5txen)
-    {
+    else if (B5CONR.rxful && !BSEL0.b5txen) {
         ECANCON.ewin=TXRX5;
         stat.buffer=7;
 
         stat.err_ovfl=COMSTAT_MODE_1.rxnovfl;
         stat.filthit=B5CONR.filhit;
     }
-    else
-    {
+    else {
         #if CAN_DO_DEBUG
             can_debug("\r\nFAIL ON CAN_GETD(): NO MESSAGE IN BUFFER\r\n");
         #endif
@@ -854,16 +824,14 @@ int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
     id=can_get_id(TXRXBaID,stat.ext);
 
     ptr = &TXRXBaD0;
-    for (i = 0; i < len; i++)
-    {
+    for (i = 0; i < len; i++) {
         *data = *ptr;
         data++;
         ptr++;
     }
 
     // Switch statement to clear rxful flag and interrupt flag
-    switch(stat.buffer)
-    {
+    switch(stat.buffer) {
     case 0:
         RXB0CON.rxful=0;
         if(curfunmode)
@@ -913,12 +881,10 @@ int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
 #if CAN_DO_DEBUG
     can_debug("\r\nCAN_GETD(): BUFF=%U ID=%LX LEN=%U OVF=%U ", stat.buffer, id, len, stat.err_ovfl);
     can_debug("FILT=%U RTR=%U EXT=%U INV=%U", stat.filthit, stat.rtr, stat.ext, stat.inv);
-    if ((len)&&(!stat.rtr))
-    {
+    if ((len)&&(!stat.rtr)) {
         data-=len;
         can_debug("\r\n    DATA = ");
-        for (i=0;i<len;i++)
-        {
+        for (i=0;i<len;i++) {
             can_debug("%X ",*data);
             data++;
         }
@@ -947,8 +913,7 @@ int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
  * More information can be found on the programmable buffers in the PIC18F4580
  * datasheet, section 23.5.3
  */
-void can_enable_b_transfer(PROG_BUFFER b)
-{
+void can_enable_b_transfer(PROG_BUFFER b) {
     int8 temp;
 
     temp=BSEL0;
@@ -975,8 +940,7 @@ void can_enable_b_transfer(PROG_BUFFER b)
  * More information can be found on the programmable buffers in the PIC18F4580
  * datasheet, section 23.5.3
  */
-void can_enable_b_receiver(PROG_BUFFER b)
-{
+void can_enable_b_receiver(PROG_BUFFER b) {
     int8 temp;
 
     temp=BSEL0;
@@ -1009,8 +973,7 @@ void can_enable_b_receiver(PROG_BUFFER b)
  * More information can be found on Auto-rtr in the PIC18F4580 datasheet,
  * section 23.5.4
  */
-void can_enable_rtr(PROG_BUFFER b)
-{
+void can_enable_rtr(PROG_BUFFER b) {
     can_enable_b_transfer (b);
 
     if(bit_test(b,2))
@@ -1052,8 +1015,7 @@ void can_enable_rtr(PROG_BUFFER b)
  * More information can be found on Auto-rtr in the PIC18F4580 datasheet,
  * section 23.5.4
  */
-void can_disable_rtr(PROG_BUFFER b)
-{
+void can_disable_rtr(PROG_BUFFER b) {
     if(bit_test(b,2))
         B0CONTA&=0xfb;
     if(bit_test(b,3))
@@ -1095,8 +1057,7 @@ void can_disable_rtr(PROG_BUFFER b)
  * More information on the Auto-rtr can be found in the PIC18F4580 datasheet
  * section 23.5.4
  */
-void can_load_rtr (PROG_BUFFER b, int8 *data, int8 len)
-{
+void can_load_rtr (PROG_BUFFER b, int8 *data, int8 len) {
     int8 *ptr;
 
     // Do no damage to the current mode;
@@ -1109,28 +1070,23 @@ void can_load_rtr (PROG_BUFFER b, int8 *data, int8 len)
         ptr=&B0D0;
         B0DLCT=len;
     }
-    else if (bit_test(b,3))
-    {
+    else if (bit_test(b,3)) {
         ptr=&B1D0;
         B1DLCT=len;
     }
-    else if (bit_test(b,4))
-    {
+    else if (bit_test(b,4)) {
         ptr=&B2D0;
         B2DLCT=len;
     }
-    else if (bit_test(b,5))
-    {
+    else if (bit_test(b,5)) {
         ptr=&B3D0;
         B3DLCT=len;
     }
-    else if (bit_test(b,6))
-    {
+    else if (bit_test(b,6)) {
         ptr=&B4D0;
         B4DLCT=len;
     }
-    else if (bit_test(b,7))
-    {
+    else if (bit_test(b,7)) {
         ptr=&B5D0;
         B5DLCT=len;
     }
@@ -1157,8 +1113,7 @@ void can_load_rtr (PROG_BUFFER b, int8 *data, int8 len)
  * More information can be found on Acceptance Filters in the PIC18F4580
  * datasheet, Section 23.8
  */
-void can_enable_filter(int16 filter)
-{
+void can_enable_filter(int16 filter) {
     int16 *ptr;
 
     curmode=CANSTAT.opmode;
@@ -1183,8 +1138,7 @@ void can_enable_filter(int16 filter)
  * More information can be found on Acceptance Filters in the PIC18F4580
  * datasheet, Section 23.8
  */
-void can_disable_filter(int16 filter)
-{
+void can_disable_filter(int16 filter) {
     int16 *ptr;
 
     curmode=CANSTAT.opmode;
@@ -1214,8 +1168,7 @@ void can_disable_filter(int16 filter)
  * More information can be found on Acceptance Filters in the PIC18F4580
  * datasheet, Section 23.8
  */
-void can_associate_filter_to_buffer(CAN_FILTER_ASSOCIATION_BUFFERS buffer, CAN_FILTER_ASSOCIATION filter)
-{
+void can_associate_filter_to_buffer(CAN_FILTER_ASSOCIATION_BUFFERS buffer, CAN_FILTER_ASSOCIATION filter) {
     int8 *ptr;
 
     curmode=CANSTAT.opmode;
@@ -1224,13 +1177,11 @@ void can_associate_filter_to_buffer(CAN_FILTER_ASSOCIATION_BUFFERS buffer, CAN_F
 
     ptr=(filter>>1)|0x0DE0;
 
-    if((filter & 0x01) == 1)
-    {
+    if((filter & 0x01) == 1) {
         *ptr&=0x0f;
         *ptr|=buffer<<4;
     }
-    else
-    {
+    else {
         *ptr&=0xf0;
         *ptr|=buffer;
     }
@@ -1256,8 +1207,7 @@ void can_associate_filter_to_buffer(CAN_FILTER_ASSOCIATION_BUFFERS buffer, CAN_F
  * More information can be foun on Acceptance Filters in the PIC18F4580
  * datasheet, Section 23.8
  */
-void can_associate_filter_to_mask(CAN_MASK_FILTER_ASSOCIATE mask, CAN_FILTER_ASSOCIATION filter)
-{
+void can_associate_filter_to_mask(CAN_MASK_FILTER_ASSOCIATE mask, CAN_FILTER_ASSOCIATION filter) {
     int8 *ptr;
 
     curmode = CANSTAT.opmode;
@@ -1266,23 +1216,19 @@ void can_associate_filter_to_mask(CAN_MASK_FILTER_ASSOCIATE mask, CAN_FILTER_ASS
 
     ptr=(filter>>2)|0x0DF0;
 
-    if((filter & 0x03)==0)
-    {
+    if((filter & 0x03)==0) {
         *ptr&=0xfc;
         *ptr|=mask;
     }
-    else if((filter & 0x03)==1)
-    {
+    else if((filter & 0x03)==1) {
         *ptr&=0xf3;
         *ptr|=mask<<2;
     }
-    else if((filter & 0x03)==2)
-    {
+    else if((filter & 0x03)==2) {
         *ptr&=0xcf;
         *ptr|=mask<<4;
     }
-    else if((filter & 0x03)==3)
-    {
+    else if((filter & 0x03)==3) {
         *ptr&=0x3f;
         *ptr|=mask<<6;
     }
@@ -1307,8 +1253,7 @@ void can_associate_filter_to_mask(CAN_MASK_FILTER_ASSOCIATE mask, CAN_FILTER_ASS
  * More information can be found on the FIFO mode in the PIC18F4580 datasheet
  * section 23.7.3
  */
-int1 can_fifo_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
-{
+int1 can_fifo_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat) {
 
     int8 i;
     int8 *ptr;
@@ -1375,8 +1320,7 @@ int1 can_fifo_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat)
  */
 
 // Transfer buffer 0
-int1 can_t0_putd(unsigned int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_t0_putd(unsigned int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *ptr;
 
     if(TXB0CON.txreq)
@@ -1392,8 +1336,7 @@ int1 can_t0_putd(unsigned int32 id, int8 *data, int8 len, int8 pri, int1 ext, in
 
     ptr = &TXB0D0;
 
-    for(;len>0;len--)
-    {
+    for(;len>0;len--) {
         *ptr = *data;
         ptr++;
         data++;
@@ -1405,8 +1348,7 @@ int1 can_t0_putd(unsigned int32 id, int8 *data, int8 len, int8 pri, int1 ext, in
 }
 
 // Trasfer buffer 1
-int1 can_t1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_t1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *ptr;
 
     if(TXB1CON.txreq)
@@ -1422,8 +1364,7 @@ int1 can_t1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 
     ptr = &TXB1D0;
 
-    for(;len>0;len--)
-    {
+    for(;len>0;len--) {
         *ptr = *data;
         ptr++;
         data++;
@@ -1435,8 +1376,7 @@ int1 can_t1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 }
 
 // Transfer buffer 2
-int1 can_t2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_t2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *ptr;
 
     if(TXB2CON.txreq)
@@ -1452,8 +1392,7 @@ int1 can_t2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 
     ptr = &TXB2D0;
 
-    for(;len>0;len--)
-    {
+    for(;len>0;len--) {
         *ptr = *data;
         ptr++;
         data++;
@@ -1465,8 +1404,7 @@ int1 can_t2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 }
 
 // Programmable buffer 0
-int1 can_b0_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_b0_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *txd0;
 
     txd0=&TXRXBaD0;
@@ -1486,8 +1424,7 @@ int1 can_b0_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     TXBaDLC=len;
     TXBaDLC.rtr=rtr;
 
-    for (;len>0;len--)
-    {
+    for (;len>0;len--) {
         *txd0=*data;
         txd0++;
         data++;
@@ -1500,12 +1437,10 @@ int1 can_b0_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     ECANCON.ewin=RX0;
 
     return(TRUE);
-
 }
 
 // Programmable buffer 1
-int1 can_b1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_b1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *txd0;
 
     txd0=&TXRXBaD0;
@@ -1525,8 +1460,7 @@ int1 can_b1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     TXBaDLC=len;
     TXBaDLC.rtr=rtr;
 
-    for (;len>0;len--)
-    {
+    for (;len>0;len--) {
         *txd0=*data;
         txd0++;
         data++;
@@ -1542,8 +1476,7 @@ int1 can_b1_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 }
 
 // Programmable buffer 2
-int1 can_b2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_b2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *txd0;
 
     txd0=&TXRXBaD0;
@@ -1563,8 +1496,7 @@ int1 can_b2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     TXBaDLC=len;
     TXBaDLC.rtr=rtr;
 
-    for (;len>0;len--)
-    {
+    for (;len>0;len--) {
         *txd0=*data;
         txd0++;
         data++;
@@ -1580,8 +1512,7 @@ int1 can_b2_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 }
 
 // Programmable buffer 3
-int1 can_b3_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_b3_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *txd0;
 
     txd0=&TXRXBaD0;
@@ -1601,8 +1532,7 @@ int1 can_b3_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     TXBaDLC=len;
     TXBaDLC.rtr=rtr;
 
-    for (;len>0;len--)
-    {
+    for (;len>0;len--) {
         *txd0=*data;
         txd0++;
         data++;
@@ -1615,12 +1545,10 @@ int1 can_b3_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     ECANCON.ewin=RX0;
 
     return(TRUE);
-
 }
 
 // Programmable buffer 4
-int1 can_b4_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_b4_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *txd0;
 
     txd0=&TXRXBaD0;
@@ -1640,8 +1568,7 @@ int1 can_b4_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     TXBaDLC=len;
     TXBaDLC.rtr=rtr;
 
-    for (;len>0;len--)
-    {
+    for (;len>0;len--) {
         *txd0=*data;
         txd0++;
         data++;
@@ -1657,8 +1584,7 @@ int1 can_b4_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 }
 
 // Programmable buffer 5
-int1 can_b5_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
-{
+int1 can_b5_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr) {
     int8 *txd0;
 
     txd0=&TXRXBaD0;
@@ -1678,8 +1604,7 @@ int1 can_b5_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
     TXBaDLC=len;
     TXBaDLC.rtr=rtr;
 
-    for (;len>0;len--)
-    {
+    for (;len>0;len--) {
         *txd0=*data;
         txd0++;
         data++;
@@ -1695,6 +1620,3 @@ int1 can_b5_putd(int32 id, int8 *data, int8 len, int8 pri, int1 ext, int1 rtr)
 
     return(TRUE);
 }
-
-
-

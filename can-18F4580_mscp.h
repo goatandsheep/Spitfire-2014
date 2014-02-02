@@ -134,8 +134,8 @@ struct {
 // CAN control for mode 1
 struct {
     int1 void3210:4;        //0:3
-    int1 abat;              //4    //Abort all pending transmissions
-    CAN_OP_MODE reqop:3;    //5:7  //Request CAN operation mode bits
+    int1 abat;              //4     //Abort all pending transmissions
+    CAN_OP_MODE reqop:3;    //5:7   //Request CAN operation mode bits
 } CANCON_MODE_1;
 #byte CANCON_MODE_1 = getenv("SFR:CANCON")  //0xF6F
 
