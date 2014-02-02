@@ -704,7 +704,7 @@ int8 can_putd(int32 id, int8 *data, int8 len, int8 priority, int1 ext, int1 rtr)
         }
         can_debug("\r\n");
     }
-#end
+#endif
     return(port);
 }
 
