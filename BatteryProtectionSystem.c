@@ -54,7 +54,7 @@ const uint16 OVER_CURRENT = 0;
 const uint16 updateInterval = 1000;
 const uint8 totalSensors = 14;
 const uint8 sensorIDs[totalSensors] = {0x05,0,0,0,0,0,0,0,0,0,0,0,0,0};
-uint16 rawVoltageData[totalSensors] = {1,2,3,4,5,6,7,800,900,1000,900,800,700,600};
+uint16 rawVoltageData[totalSensors] = {1,2,3,4,5,6,7,100,120,50,120,105,101,100};
 uint16 rawTemperatureData[totalSensors] = {6,10,12,53,24,45,66,37,48,39,410,311,312,213};
 uint16 rawCurrentData = 0;
 uint16 minVoltage = 0;
@@ -65,6 +65,7 @@ uint16 ms = 0;
 int8 packetNum = 1;
 
 const int32 tx_id = 0x002;
+//uint8 out_data[8] = {1,2,3,4,100,200,300,400};
 const int tx_len = 8;
 const int tx_pri = 3;
 const int1 tx_rtr = 0;
@@ -77,15 +78,19 @@ void isr_timer2(void) {
 
 //send data to LCD
 void LCD_Send(void) {
-    printf(lcd_putc, "Hello World!");
+    //printf(lcd_putc, "Hello World!");
 }
 
 void setPacketData(int8 packet, uint8* data) {
     int i;
+    uint8 truncValue;
     if(packet == 1) {
             data[0] = 0;
-            for(i = 1; i < 8; i++)
-                data[i] = (uint8)rawVoltageData[i-1];
+            // for loop works when taking value from uint8 array to data(uint8 array), but not from uint16 array to data
+            for(i = 1; i < 8; i++) {
+               // truncValue = (uint8)rawVoltageData[i-1];
+                data[i] = rawVoltageData[i-1];
+            }
             /**for(i = 5; i < 8; i++)
                 data[i] = (uint8)rawVoltageData[i-1];
                 
@@ -133,8 +138,9 @@ int CANBus_Send(void) {
 
     setPacketData(packetNum, &out_data[0]);
     response = can_putd(tx_id,out_data,tx_len,tx_pri,tx_ext,tx_rtr);
-    output_toggle(LED);
-    
+    if(response != 0xFF) {
+        output_toggle(LED);
+    }
     /**if(packetNum == 4) {
         packetNum = 1;
     } else {
@@ -144,7 +150,6 @@ int CANBus_Send(void) {
 }
 
 void main(void) {
-   int i;
    setup_comparator(NC_NC_NC_NC);
    setup_adc(ADC_CLOCK_DIV_32);
    setup_adc_ports(ALL_ANALOG);
@@ -154,7 +159,6 @@ void main(void) {
    enable_interrupts(INT_TIMER2);  
    enable_interrupts(GLOBAL); 
     
-   lcd_init();
    can_init();
    set_tris_c((*0xF94 & 0xBF) | 0x80);
 
