@@ -1052,17 +1052,17 @@ struct rx_stat {
 #define can_tbe()   (!TXB0CON.txreq || !TXB1CON.txreq || !TXB2CON.txreq || (!B0CONT.txreq && BSEL0.b0txen) || (!B1CONT.txreq && BSEL0.b1txen) || (!B2CONT.txreq && BSEL0.b2txen) || (!B3CONT.txreq && BSEL0.b3txen) || (!B4CONT.txreq && BSEL0.b4txen) || (!B5CONT.txreq && BSEL0.b5txen))
 #define can_abort() (CANCON.abat=1)
 
-void  can_init(void);
-void  can_set_baud(void);
-void  can_set_mode(CAN_OP_MODE mode);
-void  can_set_functional_mode(CAN_FUN_OP_MODE mode);
-void  can_set_id(int8 *addr, int32 id, int1 ext);
+void can_init(void);
+void can_set_baud(void);
+void can_set_mode(CAN_OP_MODE mode);
+void can_set_functional_mode(CAN_FUN_OP_MODE mode);
+void can_set_id(int8 *addr, int32 id, int1 ext);
 int32 can_get_id(int8 *addr, int1 ext);
-int8  can_putd(int32 id, int8 *data, int8 len, int8 priority, int1 ext, int1 rtr);
-int1  can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat);
-void  can_enable_rtr(PROG_BUFFER b);
-void  can_disable_rtr(PROG_BUFFER b);
-void  can_load_rtr(PROG_BUFFER b, int8 *data, int8 len);
+int8 can_putd(int32 id, int8 *data, int8 len, int8 priority, int1 ext, int1 rtr);
+int1 can_getd(int32 &id, int8 *data, int8 &len, struct rx_stat &stat);
+void can_enable_rtr(PROG_BUFFER b);
+void can_disable_rtr(PROG_BUFFER b);
+void can_load_rtr(PROG_BUFFER b, int8 *data, int8 len);
 void can_enable_filter(int16 filter);
 void can_disable_filter(int16 filter);
 void can_associate_filter_to_buffer(CAN_FILTER_ASSOCIATION_BUFFERS buffer, CAN_FILTER_ASSOCIATION filter);

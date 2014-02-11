@@ -91,9 +91,6 @@
  *
  *  Mar 24 11 - updated for new PIC18FxxK80 chips
  *
- *  Jan 25 14 - updated comment formatting and general orginization
- *            - Fixed an issue causing the program to hang on can_init
- *
  * ===============================================================
  *
  *               (C) Copyright 1996,2011 Custom Computer Services
@@ -179,7 +176,7 @@ void can_init(void) {
 
     can_set_mode(CAN_OP_NORMAL);
     curfunmode=CAN_FUN_OP_ENHANCED_FIFO;
-    // can_set_functional_mode(curfunmode); // Commented out Jan 25 14
+    can_set_functional_mode(curfunmode);
 }
 
 /*
