@@ -28,8 +28,6 @@
 #define BATT_RELAY PIN_A0
 #define MPPT_RELAY PIN_C0
 
-#define RS232_TX_PIN PIN_C6     // not needed?
-#define RS232_RX_PIN PIN_C7     // not needed?
 #define I2C_SDA_PIN PIN_C4
 #define I2C_SCL_PIN PIN_C3
 #define I2C_WRITE_BIT 0
@@ -69,8 +67,6 @@ void setPacketData(int8 packet, uint8* data);
 #use rs232(baud = 115200, parity = N, UART1, bits = 8)
 #use i2c(master, sda = I2C_SDA_PIN, scl = I2C_SCL_PIN)
 
-
-
 const uint16 updateInterval = 1000; // ms
 const uint8 totalSensors = 14;
 const uint8 sensorIDs[totalSensors] = {0x05,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -97,7 +93,6 @@ void isr_timer2(void) {
    ms++;
 }
 
-
 // Use length of can frame to tell wether or not its an error message
 // 8 bytes is normal data flow, less is error message
 // Over/Under Volt/Temp - Send error code, sensor, and reading. (3 Bytes)
@@ -108,9 +103,6 @@ void LCD_Send(void) {
     //printf(lcd_putc, "Hello World!");
 }
 
-/*
- *  
- */
 void setPacketData(int8 packet, uint8* data) {
     uint16 i;
     if(packet == 1) {
@@ -193,11 +185,11 @@ void main(void) {
     while(true) {
         // Monitor sensors continuously
         // Retrieve raw data and store in rawSensorData and rawCurrentData
-        for(i = 0; i < totalSensors; i++) {
+        /**for(i = 0; i < totalSensors; i++) {
             rawVoltData[i] = getRawSensorVal(sensorIDs[i], VOLT_SENSOR);
             rawTempData[i] = getRawSensorVal(sensorIDs[i], TEMP_SENSOR);
         }
-        rawCurrentData = rawCurrentRetrieve();
+        rawCurrentData = rawCurrentRetrieve();*/
         
         // Send data to the CANBus only every second
         if(ms > updateInterval) {
