@@ -58,7 +58,6 @@
 
 #include <can-18F4580_mscp.c>  // Modified CAN library includes default FIFO mode, timing settings match MPPT, 11-bit instead of 24-bit addressing
 
-
 void main() {
    //Use local receive structure for CAN polling receive
    struct rx_stat rxstat;
@@ -77,27 +76,28 @@ void main() {
    //set_tris_c((*0xF94 & 0xBF) | 0x80);  //c6 is out, c7 is in (if using #FUSES CANC)
    //can_set_mode(CAN_OP_LOOPBACK);       //Only use for loopback testing
    
+   //enable_interrupts(INT_CANRX0);   //enable CAN FIFO receive interrupt
    //enable_interrupts(INT_CANRX1);   //enable CAN FIFO receive interrupt
    enable_interrupts(INT_TIMER2);   //enable timer2 interrupt (if want to count ms)
    enable_interrupts(GLOBAL);       //enable all interrupts
 
     while(1) {
-        output_high(RTS);
+        delay_ms(10);
         
-        delay_ms(800);
+        output_high(RTS);
       
         // This is the polling receive routine
         if (can_kbhit()) {
-            //if data is waiting in buffer...
+            // If data is waiting in buffer...
             if(can_getd(rx_id, in_data, rx_len, rxstat)) {
-                //...then get data from buffer, and place it into the fields: rx_id, in_data, rx_len... etc
+                // get data from buffer, and place it into the fields: rx_id, in_data, rx_len... etc
                 printf("RECIEVED: BUFF=%U ID=%3LX LEN=%U OVF=%U ", rxstat.buffer, rx_id, rx_len, rxstat.err_ovfl);
                 printf("FILT=%U RTR=%U EXT=%U INV=%U\r\n", rxstat.filthit, rxstat.rtr, rxstat.ext, rxstat.inv);
                 printf("\tDATA = ");
                 for (i=0;i<rx_len;i++)
                     printf("%02X ", in_data[i]);
             } else {
-                printf("FAIL on can_getd\r\n");
+                printf("FAIL on can_getd");
             }
             
             printf("\r\n");
