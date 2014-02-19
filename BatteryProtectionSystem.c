@@ -105,22 +105,22 @@ void LCD_Send(void) {
 
 void setPacketData(int8 packet, uint8* data) {
     uint16 i;
-    if(packet == 1) {
+    if(packet == 0) {
         data[0] = 0;
         
         for(i = 1; i < 8; i++)
             data[i] = (uint8)(rawVoltData[i-1]>>2);
-    } else if (packet == 2) {
+    } else if (packet == 1) {
         data[0] = (uint8)(rawCurrentData>>8);
         
         for(i = 1; i < 8; i++)
             data[i] = (uint8)(rawVoltData[i+6]>>2);
-    } else if (packet == 3) { 
+    } else if (packet == 2) {
         data[0] = (uint8)rawCurrentData;
         
         for(i = 1; i < 8; i++)
             data[i] = (uint8)(rawTempData[i-1]>>2);
-    } else if (packet == 4) {
+    } else if (packet == 3) {
         for(i = 0; i < 7; i++)
             data[i] = (uint8)(rawTempData[i+7]>>2);
             
@@ -143,10 +143,7 @@ int CANBus_SendData(void) {
     if(response != 0xFF) {
         output_toggle(LED);
         
-        if(packetNum == 4)
-            packetNum = 1;
-        else
-            packetNum++;
+        packetNum = (packetNum + 1) % 4;
     }
     
     return(response);
