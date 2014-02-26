@@ -21,7 +21,7 @@
 #FUSES CANC             // CANTX and CANRX pins are located on RC6 and RC7
 
 #include <can-18F4580_mscp.c>
-#include <flex_lcd_PROT4-2.c>
+//#include <flex_lcd_PROT4-2.c>
 
 // Preprocessor Macros
 // uC pins
@@ -59,30 +59,45 @@
 #define VOLT_HIGH       0x01
 #define VOLT_LOW        0x02
 #define TEMP_HIGH       0x04
-#define CURRENT_HIGH    0x08
-#define CURRENT_LOW     0x10
+#define TEMP_LOW        0x08
+#define CURRENT_HIGH    0x10
+#define CURRENT_LOW     0x20
 #define WARN_BIT        0x40
 #define ERROR_BIT       0x80
 
 // Code checking
-#define IS_VOLT_CODE(x)     ((x) & 0x03)
-#define IS_TEMP_CODE(x)     ((x) & 0x04)
-#define IS_CURRENT_CODE(x)  ((x) & 0x18)
-#define IS_WARN_CODE(x)     ((x) & WARN_BIT)
-#define IS_ERROR_CODE(x)    ((x) & ERROR_BIT)
+#define IS_VOLT_CODE(x)     ((x) & (VOLT_HIGH | VOLT_LOW))
+#define IS_TEMP_CODE(x)     ((x) & (TEMP_HIGH | TEMP_LOW))
+#define IS_CURRENT_CODE(x)  ((x) & (CURRENT_HIGH | CURRENT_LOW))
+#define IS_WARNING(x)       ((x) & WARN_BIT)
+#define IS_ERROR(x)         ((x) & ERROR_BIT)
 
 // Typedefs
 typedef unsigned int8 uint8;
 typedef unsigned int16 uint16;
 
-// Function prototypes
+
+typedef struct SensorData {
+    uint8 ID;
+    uint16 tempData, voltData;
+    uint8 overTempCount;
+    uint8 overVoltCount, underVoltCount;
+};
+
+typedef struct HallEffectData {
+    uint16 data;
+    uint8 overCount;
+};
+
+// Function prototypes (organize these)
+void initSensors(void);
+uint8 updateSensor(uint8 n);
 void LCD_Send(void);
 int CANBus_SendData(void);
-uint8 getWarning(uint16 voltReading, uint16 tempReading);
-uint8 getError(uint16 voltReading, uint16 tempReading);
-uint8 getWarningCurrent(uint16 currReading);
-uint8 getErrorCurrent(uint16 currReading);
-int CANBus_SendMessage(uint8 errCode, uint8 sensor);
+int1 currentDischarge(void);
+uint8 getErrCode(uint16 voltReading, uint16 tempReading);
+uint8 getHallErrorCode(uint16 hallReading);
+int CANBus_SendMessage(uint8 errCode, uint8 n);
 void setPacketData(int8 packet, uint8* data);
 uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister);
 uint16 rawCurrentRetrieve(void);
@@ -93,18 +108,16 @@ uint16 combineBytes(uint8 high, uint8 low);
 #use i2c(master, sda = I2C_SDA_PIN, scl = I2C_SCL_PIN)
 
 const uint16 updateInterval = 250; // ms
-const uint8 maxErrorReadings = 4;
-const uint8 totalSensors = 14;
-const uint8 sensorIDs[totalSensors] = {0x05,0,0,0,0,0,0,0,0,0,0,0,0,0};
-uint16 rawVoltData[totalSensors] = {4,8,12,16,20,24,28,32,36,40,44,48,52,56};
-uint16 rawTempData[totalSensors] = {64,68,72,76,80,84,88,92,96,100,104,108,112,116};
+const uint8 maxErrorCount = 4;
+const uint8 numSensors = 14;
+struct SensorData sensor[numSensors];
+struct HallEffectData hallSensor;
 uint16 rawCurrentData = 0xABCD; // can current be negative?
 
 uint16 ms = 0;
 int8 packetNum = 0;
 
 const int32 tx_id = 0x002;  // bps id?
-const int tx_len = 8;   // either not needed or not constant, int literal is probably good enough
 const int tx_pri = 3;
 const int1 tx_rtr = 0;
 const int1 tx_ext = 0;
@@ -121,11 +134,9 @@ void isr_timer2(void) {
 // Over/Under current - Send error code and reading. (2 Bytes)
 
 void main(void) {
-    uint16 i;
+    uint8 i;
     uint8 warnFlag = 0;
-    uint8 voltErrorCount[totalSensors];
-    uint8 tempErrorCount[totalSensors];
-    uint8 currentErrorCount;
+    uint8 errCode;
     
     output_high(LED);
     setup_comparator(NC_NC_NC_NC);
@@ -138,15 +149,9 @@ void main(void) {
     enable_interrupts(GLOBAL);
     
     can_init();
+    initSensors();
     
     set_tris_c((*0xF94 & 0xBF) | 0x80); // Set C7 to input, C6 to output
-    
-    // Initialize error counts to 0
-    for(i=0;i<totalSensors;i++) {
-        voltErrorCount[i]=0;
-        tempErrorCount[i]=0;
-    }
-    currentErrorCount=0;
     
     // Close relay on each sensor to physically enable it
     output_high(SENSOR_RELAY);
@@ -158,13 +163,24 @@ void main(void) {
         ms = 0;
         
         
-        for(i = 0; i < totalSensors; i++) {
-            rawVoltData[i] = getRawSensorVal(sensorIDs[i], VOLT_REGISTER);
-            rawTempData[i] = getRawSensorVal(sensorIDs[i], TEMP_REGISTER);
+        
+        for(i = 0; i < numSensors; i++) {
+            errCode = updateSensor(i);
             
-            uint8 errCode = checkSensorValues(i);
+            // If the sensor is in the normal operating range, move on to the
+            // next one
+            if (errCode == NONE)
+                continue;
             
-            if (errCode != NO_ERROR) {
+            if (IS_WARNING(errCode)) {
+            
+            }
+            
+            if (IS_ERROR(errCode)) {
+            
+            }
+            
+            /*if (errCode != NONE) {
                 // do warnings and errors
                 CANBus_SendMessage(errCode, i);
                 
@@ -176,7 +192,7 @@ void main(void) {
                 if (tempErrorCount[i] > maxErrorCount) {
                     // shutdown
                 }
-            }
+            }*/
         }
         
         rawCurrentData = rawCurrentRetrieve();
@@ -184,6 +200,88 @@ void main(void) {
         LCD_Send();
         CANBus_SendData();
     }
+}
+
+/*
+ *  initSensors
+ *
+ *  Initializes the sensorIDs, sets the error counts and data values to 0 for
+ *  every temperature/voltage sensor, as well as the hall effect sensor.
+ */
+void initSensors(void) {
+    int i;
+
+    // Initialize volt/temp sensors
+    sensor[0].ID = 0x05;
+    sensor[1].ID = 0x0;
+    sensor[2].ID = 0x0;
+    sensor[3].ID = 0x0;
+    sensor[4].ID = 0x0;
+    sensor[5].ID = 0x0;
+    sensor[6].ID = 0x0;
+    sensor[7].ID = 0x0;
+    sensor[8].ID = 0x0;
+    sensor[9].ID = 0x0;
+    sensor[10].ID = 0x0;
+    sensor[11].ID = 0x0;
+    sensor[12].ID = 0x0;
+    sensor[13].ID = 0x0;
+
+    for (i=0; i<numSensors; i++) {
+        sensor[i].tempData = 0;
+        sensor[i].voltData = 0;
+        sensor[i].overTempCount = 0;
+        sensor[i].overVoltCount = 0;
+        sensor[i].underVoltCount = 0;
+    }
+    
+    // Initialize current sensor
+    hallSensor.data = 0xABCD;
+    hallSensor.overCount = 0;
+}
+
+/*
+ *  updateSensor
+ *
+ *  Reads the specified sensor's voltage and temperature values, compares these
+ *  readings to their corresponding threshold values. If any readings are above
+ *  their ERROR threshold, their error counter is incremented.
+ *
+ *  Arguments:
+ *  n - Sensor number
+ *  
+ *  Return:
+ *  Error and/or warning code
+ */
+uint8 updateSensor(uint8 n) {
+    uint8 ret = NONE;
+    
+    sensor[n].voltData = getRawSensorVal(sensor[n].ID, VOLT_REGISTER);
+    sensor[n].tempData = getRawSensorVal(sensor[n].ID, TEMP_REGISTER);
+    
+    ret = getErrCode(sensor[n].voltData, sensor[n].tempData);
+    
+    if (IS_ERROR(ret)) {
+        switch(ret) {
+        case VOLT_HIGH:
+            sensor[n].overVoltCount++;
+            break;
+        case VOLT_LOW:
+            sensor[n].underVoltCount++;
+            break;
+        case TEMP_HIGH:
+            sensor[n].overTempCount++;
+            break;
+        default:
+            break;
+        }
+    }
+    
+    return ret;
+}
+
+int1 hallDischarge(void) {
+    return (hallSensor.data > 0);
 }
 
 // Send data to LCD
@@ -209,63 +307,64 @@ int CANBus_SendData(void) {
     return(response);
 }
 
-uint8 getWarning(uint16 voltReading, uint16 tempReading) {
+uint8 getErrCode(uint16 voltReading, uint16 tempReading) {
     uint8 ret = NONE;
-    uint16 tempThresh;
-    int1 discharge = 0; // charge/discharge is determined by direction of current
+    uint16 tempWarnThresh, tempErrThresh;
     
-    // Check for over/under voltage
-    if (voltReading > VOLT_MAX_WARN)
-        ret |= VOLT_HIGH;
-    else if (voltReading < VOLT_MIN_WARN)
-        ret |= VOLT_LOW;
-    
-    // Check for over temperature (different threshold for charge/discharge)
-    if (discharge)
-        tempThresh = TEMP_DISCHARGE_MAX_WARN;
-    else
-        tempThresh = TEMP_CHARGE_MAX_WARN;
-    
-    if (tempReading > tempThresh)
-        ret |= TEMP_HIGH;
+    if (voltReading > VOLT_MAX_WARN) {
+        ret |= VOLT_HIGH | WARN_BIT;
         
-    // Only call the return value a warning if it is non-zero
-    if (ret != NONE)
-        ret |= WARN_BIT;
+        if (voltReading > VOLT_MAX_ERROR)
+            ret |= ERROR_BIT;
+    } else if (voltReading < VOLT_MIN_WARN){
+        ret |= VOLT_LOW | WARN_BIT;
+        
+        if (voltReading < VOLT_MIN_ERROR)
+            ret |= ERROR_BIT;
+    }
+        
+    if (hallDischarge()) {
+        tempWarnThresh = TEMP_DISCHARGE_MAX_WARN;
+        tempErrThresh = TEMP_DISCHARGE_MAX_ERROR;
+    } else {
+        tempWarnThresh = TEMP_CHARGE_MAX_WARN;
+        tempErrThresh = TEMP_CHARGE_MAX_ERROR;
+    }
+        
+    if (tempReading > tempWarnThresh) {
+        ret |= TEMP_HIGH | WARN_BIT;
+        
+        if (tempReading > tempErrThresh)
+            ret |= ERROR_BIT;
+    }
     
     return ret;
 }
 
-uint8 getError(uint16 voltReading, uint16 tempReading) {
-    return NONE;
-}
-
-uint8 getWarningCurrent(uint16 currReading) {
+uint8 getHallErrorCode(uint16 hallReading) {
     uint8 ret = NONE;
-    int1 discharge = 0; // charge/discharge is determined by direction of current
-    uint16 thresh;
+    uint16 warnThresh, errThresh;
     
     // get appropriate threshold for charge/discharge
-    if (discharge)
-        thresh = CURRENT_DISCHARGE_MAX_WARN;
-    else
-        thresh = CURRENT_CHARGE_MAX_WARN;
+    if (hallDischarge()) {
+        warnThresh = CURRENT_DISCHARGE_MAX_WARN;
+        errThresh = CURRENT_DISCHARGE_MAX_ERROR;
+    } else {
+        warnThresh = CURRENT_CHARGE_MAX_WARN;
+        errThresh = CURRENT_CHARGE_MAX_ERROR;
+    }
     
-    if (currReading > thresh)
-        ret |= CURRENT_HIGH;
-
-    // Only call the return value a warning if it is non-zero
-    if (ret != NONE)
-        ret |= WARN_BIT;
+    if (hallReading > warnThresh) {
+        ret |= CURRENT_HIGH | WARN_BIT;
+        
+        if (hallReading > errThresh)
+            ret |= ERROR_BIT;
+    }
     
     return ret;
 }
 
-uint8 getErrorCurrent(uint16 currReading) {
-    return NONE;
-}
-
-int CANBus_SendMessage(uint8 errCode, uint8 sensor) {
+int CANBus_SendMessage(uint8 errCode, uint8 n) {
     uint8 out_data[3];
     
     if (errCode == NONE)
@@ -279,12 +378,12 @@ int CANBus_SendMessage(uint8 errCode, uint8 sensor) {
         out_data[2] = (uint8)rawCurrentData;        // LSByte
     } else {
         // error code is voltage/temperature error
-        out_data[1] = sensor;
+        out_data[1] = n;
         
         if (IS_VOLT_CODE(errCode))
-            out_data[2] = rawVoltData[i] >> 2;
+            out_data[2] = sensor[n].voltData >> 2;
         else if (IS_TEMP_CODE(errCode))
-            out_data[2] = rawTempData[i] >> 2;
+            out_data[2] = sensor[n].tempData >> 2;
     }
     
     return can_putd(tx_id,out_data,3,tx_pri,tx_ext,tx_rtr);
@@ -297,18 +396,18 @@ void setPacketData(int8 packet, uint8* data) {
         data[0] = 0;
         
         for(i = 1; i < 8; i++)
-            data[i] = (uint8)(rawVoltData[i-1]>>2);
+            data[i] = (uint8)(sensor[i-1].voltData>>2);
     } else if (packet == 1) {
         data[0] = (uint8)(rawCurrentData>>8);
         for(i = 1; i < 8; i++)
-            data[i] = (uint8)(rawVoltData[i+6]>>2);
+            data[i] = (uint8)(sensor[i+6].voltData>>2);
     } else if (packet == 2) {
         data[0] = (uint8)rawCurrentData;
         for(i = 1; i < 8; i++)
-            data[i] = (uint8)(rawTempData[i-1]>>2);
+            data[i] = (uint8)(sensor[i-1].tempData>>2);
     } else if (packet == 3) {
         for(i = 0; i < 7; i++)
-            data[i] = (uint8)(rawTempData[i+7]>>2);
+            data[i] = (uint8)(sensor[i+7].tempData>>2);
         data[7] = 0;
     }
 }
