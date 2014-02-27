@@ -162,8 +162,6 @@ void main(void) {
         // else
         ms = 0;
         
-        
-        
         for(i = 0; i < numSensors; i++) {
             errCode = updateSensor(i);
             
@@ -173,26 +171,26 @@ void main(void) {
                 continue;
             
             if (IS_WARNING(errCode)) {
-            
+                /* I don't think we've fully decided on the functionality here.
+                 * Here are a few possibilities:
+                 * - Send a message every time a new warning turns on and every
+                 *   time the warning turns off.
+                 * - Send a message every time a new warning turns on and send
+                 *   a message when every warning finally turns off.
+                 * - Send a warning when a warning turns on, don't send again
+                 *   until every warning turns off, send a message when this
+                 *   happens.
+                 */
             }
             
             if (IS_ERROR(errCode)) {
-            
+                // Check if any of the counters have gone over the max count
+                if (sensor[i].overVoltCount >= maxErrorCount ||
+                    sensor[i].underVoltCount >= maxErrorCount ||
+                    sensor[i].overTempCount >= maxErrorCount) {
+                    
+                }
             }
-            
-            /*if (errCode != NONE) {
-                // do warnings and errors
-                CANBus_SendMessage(errCode, i);
-                
-                // Send data to the CANBus only every second
-                if (voltErrorCount[i] > maxErrorCount) {
-                    // shutdown
-                }
-                
-                if (tempErrorCount[i] > maxErrorCount) {
-                    // shutdown
-                }
-            }*/
         }
         
         rawCurrentData = rawCurrentRetrieve();
@@ -261,25 +259,34 @@ uint8 updateSensor(uint8 n) {
     
     ret = getErrCode(sensor[n].voltData, sensor[n].tempData);
     
-    if (IS_ERROR(ret)) {
-        switch(ret) {
-        case VOLT_HIGH:
-            sensor[n].overVoltCount++;
-            break;
-        case VOLT_LOW:
-            sensor[n].underVoltCount++;
-            break;
-        case TEMP_HIGH:
-            sensor[n].overTempCount++;
-            break;
-        default:
-            break;
-        }
-    }
+    // The behaviour when an error bit isn't set may be changed to decrement the
+    // counter instead of reseting it.
+    
+    if (IS_ERROR(ret) && (ret & VOLT_HIGH))
+        sensor[n].overVoltCount++;
+    else
+        sensor[n].overVoltCount = 0;
+    
+    if (IS_ERROR(ret) && (ret & VOLT_LOW))
+        sensor[n].underVoltCount++;
+    else
+        sensor[n].underVoltCount = 0;
+        
+    if (IS_ERROR(ret) && (ret & TEMP_HIGH))
+        sensor[n].overTempCount++;
+    else
+        sensor[n].overTempCount = 0;
     
     return ret;
 }
 
+/*
+ *  hallDischarge
+ *
+ *  Return:
+ *  1 if the hall sensor measures positive current, 0 otherwise
+ *
+ */
 int1 hallDischarge(void) {
     return (hallSensor.data > 0);
 }
@@ -289,6 +296,17 @@ void LCD_Send(void) {
     //printf(lcd_putc, "Hello World!");
 }
 
+/*
+ *  CANBus_SendData
+ *
+ *  Sends normal sensor data along the CAN bus. Data is set in setPacketData()
+ *  and is sent in this function. Also increments the packet number
+ *
+ *  Return:
+ *  response from can_putd, 0xFF if write failed, otherwise returns buffer that
+ *  can_putd wrote to
+ *
+ */
 int CANBus_SendData(void) {
     int8 response;
     // does this even need to be initd to 0s?
