@@ -41,16 +41,18 @@
 #define TEMP_REGISTER   0x18
 
 // Threshold values for voltage, temperature and current
-#define VOLT_MAX_WARN   4.0     // These should be 16bit hex/dec values, not floats
-#define VOLT_MAX_ERROR  4.2
-#define VOLT_MIN_WARN   3.0
-#define VOLT_MIN_ERROR  2.8
-#define TEMP_CHARGE_MAX_WARN   40
-#define TEMP_CHARGE_MAX_ERROR  45
-#define TEMP_DISCHARGE_MAX_WARN     55
-#define TEMP_DISCHARGE_MAX_ERROR    60
-#define CURRENT_CHARGE_MAX_WARN     0 //to be announced
-#define CURRENT_CHARGE_MAX_ERROR    0
+// To convert voltage values, divide by 5.0V and multiply by 1023
+// To convert temperature values, divide by 127 degC and multiply by 1023
+#define VOLT_MAX_WARN   818     // 4.0 
+#define VOLT_MAX_ERROR  860     // 4.2
+#define VOLT_MIN_WARN   717     // 3.0
+#define VOLT_MIN_ERROR  573     // 2.8
+#define TEMP_CHARGE_MAX_WARN        323 // 40
+#define TEMP_CHARGE_MAX_ERROR       362 // 45
+#define TEMP_DISCHARGE_MAX_WARN     443 // 55
+#define TEMP_DISCHARGE_MAX_ERROR    483 // 60
+#define CURRENT_CHARGE_MAX_WARN         0 //to be announced
+#define CURRENT_CHARGE_MAX_ERROR        0
 #define CURRENT_DISCHARGE_MAX_WARN      0
 #define CURRENT_DISCHARGE_MAX_ERROR     0
 
@@ -79,14 +81,16 @@ typedef unsigned int16 uint16;
 
 typedef struct SensorData {
     uint8 ID;
-    uint16 tempData, voltData;
-    uint8 overTempCount;
+    uint16 voltData, tempData;
+    int1 overVoltFlag, underVoltFlag, overTempFlag;
     uint8 overVoltCount, underVoltCount;
+    uint8 overTempCount;
 };
 
 typedef struct HallEffectData {
     uint16 data;
     uint8 overCount;
+    int1 overFlag;
 };
 
 // Function prototypes (organize these)
@@ -97,8 +101,8 @@ int CANBus_SendData(void);
 int1 currentDischarge(void);
 uint8 getErrCode(uint16 voltReading, uint16 tempReading);
 uint8 getHallErrorCode(uint16 hallReading);
-int CANBus_SendMessage(uint8 errCode, uint8 n);
-void setPacketData(int8 packet, uint8* data);
+int CANBus_SendError(uint8 errCode, uint8 n);
+int setPacketData(int8 packet, uint8* data);
 uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister);
 uint16 rawCurrentRetrieve(void);
 uint16 combineBytes(uint8 high, uint8 low);
@@ -107,7 +111,7 @@ uint16 combineBytes(uint8 high, uint8 low);
 #use rs232(baud = 115200, parity = N, UART1, bits = 8)
 #use i2c(master, sda = I2C_SDA_PIN, scl = I2C_SCL_PIN)
 
-const uint16 updateInterval = 250; // ms
+const uint16 updateInterval = 1000; // ms
 const uint8 maxErrorCount = 4;
 const uint8 numSensors = 14;
 struct SensorData sensor[numSensors];
@@ -226,8 +230,8 @@ void initSensors(void) {
     sensor[13].ID = 0x0;
 
     for (i=0; i<numSensors; i++) {
-        sensor[i].tempData = 0;
-        sensor[i].voltData = 0;
+        sensor[i].tempData = i*2+1;
+        sensor[i].voltData = i*4;
         sensor[i].overTempCount = 0;
         sensor[i].overVoltCount = 0;
         sensor[i].underVoltCount = 0;
@@ -252,32 +256,48 @@ void initSensors(void) {
  *  Error and/or warning code
  */
 uint8 updateSensor(uint8 n) {
-    uint8 ret = NONE;
+    uint8 err = NONE;
     
     sensor[n].voltData = getRawSensorVal(sensor[n].ID, VOLT_REGISTER);
     sensor[n].tempData = getRawSensorVal(sensor[n].ID, TEMP_REGISTER);
+    sensor[n].overVoltFlag = 0;
+    sensor[n].underVoltFlag = 0;
+    sensor[n].overTempFlag = 0;
     
-    ret = getErrCode(sensor[n].voltData, sensor[n].tempData);
+    err = getErrCode(sensor[n].voltData, sensor[n].tempData);
     
     // The behaviour when an error bit isn't set may be changed to decrement the
     // counter instead of reseting it.
     
-    if (IS_ERROR(ret) && (ret & VOLT_HIGH))
-        sensor[n].overVoltCount++;
-    else
-        sensor[n].overVoltCount = 0;
     
-    if (IS_ERROR(ret) && (ret & VOLT_LOW))
-        sensor[n].underVoltCount++;
-    else
-        sensor[n].underVoltCount = 0;
-        
-    if (IS_ERROR(ret) && (ret & TEMP_HIGH))
-        sensor[n].overTempCount++;
-    else
-        sensor[n].overTempCount = 0;
+    if (err & VOLT_HIGH) {
+        sensor[n].overVoltFlag = 1;
     
-    return ret;
+        if (IS_ERROR(err))
+            sensor[n].overVoltCount++;
+        else 
+            sensor[n].overVoltCount--;
+    }
+    
+    if (err & VOLT_LOW) {
+        sensor[n].underVoltFlag = 1;
+    
+        if (IS_ERROR(err))
+            sensor[n].underVoltCount++;
+        else 
+            sensor[n].underVoltCount--;
+    }
+    
+    if (err & TEMP_HIGH) {
+        sensor[n].overTempFlag = 1;
+    
+        if (IS_ERROR(err))
+            sensor[n].overTempCount++;
+        else 
+            sensor[n].overTempCount--;
+    }
+    
+    return err;
 }
 
 /*
@@ -296,6 +316,48 @@ void LCD_Send(void) {
     //printf(lcd_putc, "Hello World!");
 }
 
+int setPacketData(int8 packet, uint8* data) {
+    uint16 i;
+    int packetLength = 8;
+    
+    if(packet == 0) {
+        data[0] = 0;
+        
+        for(i = 1; i < 8; i++)
+            data[i] = (uint8)(sensor[i-1].voltData>>2);
+    } else if (packet == 1) {
+        data[0] = (uint8)(rawCurrentData>>8);
+        for(i = 1; i < 8; i++)
+            data[i] = (uint8)(sensor[i+6].voltData>>2);
+    } else if (packet == 2) {
+        data[0] = (uint8)rawCurrentData;
+        for(i = 1; i < 8; i++)
+            data[i] = (uint8)(sensor[i-1].tempData>>2);
+    } else if (packet == 3) {
+        for(i = 0; i < 7; i++)
+            data[i] = (uint8)(sensor[i+7].tempData>>2);
+        data[7] = 0;
+    } else if (packet == 4) {
+        packetLength = 6;
+        
+        // Sensor 0 to 7
+        for (i = 0; i < 8; i++) {
+            data[0] |= sensor[i].overVoltFlag << i;
+            data[2] |= sensor[i].underVoltFlag << i;
+            data[4] |= sensor[i].overTempFlag << i;
+        }
+        
+        // Sensor 8 to 13
+        for (i = 0; i < 6; i++) {
+            data[1] |= sensor[i+8].overVoltFlag << i;
+            data[3] |= sensor[i+8].underVoltFlag << i;
+            data[5] |= sensor[i+8].overTempFlag << i;
+        }
+        
+        data[5] |= hallSensor.overFlag << 7;
+    }
+    return(packetLength);
+}
 /*
  *  CANBus_SendData
  *
@@ -309,17 +371,18 @@ void LCD_Send(void) {
  */
 int CANBus_SendData(void) {
     int8 response;
-    // does this even need to be initd to 0s?
+    int tx_len;
+    
+    // does this even need to be initd to 0s? yes
     uint8 out_data[8] = {0,0,0,0,0,0,0,0};
     
-    setPacketData(packetNum, out_data);
-    response = can_putd(tx_id,out_data,8,tx_pri,tx_ext,tx_rtr);
+    tx_len = setPacketData(packetNum, out_data);
+    response = can_putd(tx_id,out_data,tx_len,tx_pri,tx_ext,tx_rtr);
     
     // Check if the data was written successfully
     if(response != 0xFF) {
-        output_toggle(LED);
-        
-        packetNum = (packetNum + 1) % 4;
+        output_toggle(LED);        
+        packetNum = (packetNum + 1) % 5;
     }
     
     return(response);
@@ -382,7 +445,7 @@ uint8 getHallErrorCode(uint16 hallReading) {
     return ret;
 }
 
-int CANBus_SendMessage(uint8 errCode, uint8 n) {
+int CANBus_SendError(uint8 errCode, uint8 n) {
     uint8 out_data[3];
     
     if (errCode == NONE)
@@ -405,29 +468,6 @@ int CANBus_SendMessage(uint8 errCode, uint8 n) {
     }
     
     return can_putd(tx_id,out_data,3,tx_pri,tx_ext,tx_rtr);
-}
-
-void setPacketData(int8 packet, uint8* data) {
-    uint16 i;
-    
-    if(packet == 0) {
-        data[0] = 0;
-        
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i-1].voltData>>2);
-    } else if (packet == 1) {
-        data[0] = (uint8)(rawCurrentData>>8);
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i+6].voltData>>2);
-    } else if (packet == 2) {
-        data[0] = (uint8)rawCurrentData;
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i-1].tempData>>2);
-    } else if (packet == 3) {
-        for(i = 0; i < 7; i++)
-            data[i] = (uint8)(sensor[i+7].tempData>>2);
-        data[7] = 0;
-    }
 }
 
 // See DS2764 datasheet - Voltage/Temperature Measurement
