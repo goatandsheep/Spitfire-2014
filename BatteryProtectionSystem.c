@@ -4,7 +4,7 @@
  * -------------------------
  */
 
-#include <18F26K80.h>
+#include <18F26K80.h>   //Library for PIC used (18F26K80)
 #device adc = 16
 
 #FUSES NOWDT            // No Watch Dog Timer
@@ -20,8 +20,8 @@
 #FUSES NOPROTECT        // Code not protected from reading
 #FUSES CANC             // CANTX and CANRX pins are located on RC6 and RC7
 
-#include <can-18F4580_mscp.c>
-//#include <flex_lcd_PROT4-2.c>
+#include <can-18F4580_mscp.c>  //CAN library
+//#include <flex_lcd_PROT4-2.c>  //LCD library
 
 // Preprocessor Macros
 // uC pins
@@ -36,21 +36,21 @@
 #define I2C_READ_BIT 1
 #define ADC_CHANNEL 1
 
-// Voltage and temperature sensor registers
+// Voltage and temperature sensor registers (check sensor DATASHEET for more info
 #define VOLT_REGISTER   0x0C
 #define TEMP_REGISTER   0x18
 
 // Threshold values for voltage, temperature and current
 // To convert voltage values, divide by 5.0V and multiply by 1023
 // To convert temperature values, divide by 127 degC and multiply by 1023
-#define VOLT_MAX_WARN   818     // 4.0 
-#define VOLT_MAX_ERROR  860     // 4.2
-#define VOLT_MIN_WARN   717     // 3.0
-#define VOLT_MIN_ERROR  573     // 2.8
-#define TEMP_CHARGE_MAX_WARN        323 // 40
-#define TEMP_CHARGE_MAX_ERROR       362 // 45
-#define TEMP_DISCHARGE_MAX_WARN     443 // 55
-#define TEMP_DISCHARGE_MAX_ERROR    483 // 60
+#define VOLT_MAX_WARN   818     // 4.0V
+#define VOLT_MAX_ERROR  860     // 4.2V
+#define VOLT_MIN_WARN   717     // 3.0V
+#define VOLT_MIN_ERROR  573     // 2.8V
+#define TEMP_CHARGE_MAX_WARN        200 // 40degC
+#define TEMP_CHARGE_MAX_ERROR       240 // 45degC
+#define TEMP_DISCHARGE_MAX_WARN     200 // 55degC
+#define TEMP_DISCHARGE_MAX_ERROR    240 // 60degC
 #define CURRENT_CHARGE_MAX_WARN         0 //to be announced
 #define CURRENT_CHARGE_MAX_ERROR        0
 #define CURRENT_DISCHARGE_MAX_WARN      0
@@ -78,7 +78,6 @@
 typedef unsigned int8 uint8;
 typedef unsigned int16 uint16;
 
-
 typedef struct SensorData {
     uint8 ID;
     uint16 voltData, tempData;
@@ -93,22 +92,7 @@ typedef struct HallEffectData {
     int1 overFlag;
 };
 
-// Function prototypes (organize these)
-void initSensors(void);
-uint8 updateSensor(uint8 n);
-void LCD_Send(void);
-int CANBus_SendData(void);
-int1 currentDischarge(void);
-uint8 getErrCode(uint16 voltReading, uint16 tempReading);
-uint8 getHallErrorCode(uint16 hallReading);
-int CANBus_SendError(uint8 errCode, uint8 n);
-int setPacketData(int8 packet, uint8* data);
-uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister);
-uint16 rawCurrentRetrieve(void);
-uint16 combineBytes(uint8 high, uint8 low);
-
 #use delay(clock = 20000000)
-#use rs232(baud = 115200, parity = N, UART1, bits = 8)
 #use i2c(master, sda = I2C_SDA_PIN, scl = I2C_SCL_PIN)
 
 const uint16 updateInterval = 1000; // ms
@@ -116,7 +100,7 @@ const uint8 maxErrorCount = 4;
 const uint8 numSensors = 14;
 struct SensorData sensor[numSensors];
 struct HallEffectData hallSensor;
-uint16 rawCurrentData = 0xABCD; // can current be negative?
+uint16 rawCurrentData = 0xABCD; // can current be negative? yes, we talked about this
 
 uint16 ms = 0;
 int8 packetNum = 0;
@@ -125,6 +109,20 @@ const int32 tx_id = 0x002;  // bps id?
 const int tx_pri = 3;
 const int1 tx_rtr = 0;
 const int1 tx_ext = 0;
+
+// Function prototypes (organize these)
+void setup(void);
+void initSensors(void);
+uint8 updateSensor(uint8 n);
+void LCD_Send(void);
+int CANBus_SendData(void);
+int1 hallDischarge(void);
+uint8 getErrCode(uint16 voltReading, uint16 tempReading);
+uint8 getHallErrorCode(uint16 hallReading);
+int setPacketData(int8 packet, uint8* data);
+uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister);
+uint16 getRawCurrentVal(void);
+uint16 combineBytes(uint8 high, uint8 low);
 
 // Interrupt service routines
 #int_timer2
@@ -137,12 +135,12 @@ void isr_timer2(void) {
 // Over/Under Volt/Temp - Send error code, sensor, and reading. (3 Bytes)
 // Over/Under current - Send error code and reading. (2 Bytes)
 
-void main(void) {
-    uint8 i;
-    uint8 warnFlag = 0;
-    uint8 errCode;
-    
+//setup
+void setup(void) {
     output_high(LED);
+    output_high(BATT_RELAY);
+    output_high(MPPT_RELAY);
+    
     setup_comparator(NC_NC_NC_NC);
     setup_adc(ADC_CLOCK_DIV_32);
     setup_adc_ports(ALL_ANALOG);
@@ -152,13 +150,59 @@ void main(void) {
     enable_interrupts(INT_TIMER2);
     enable_interrupts(GLOBAL);
     
-    can_init();
-    initSensors();
+    can_init();    //initialize CANBus
+    initSensors();  //set sensor IDs and default values
     
     set_tris_c((*0xF94 & 0xBF) | 0x80); // Set C7 to input, C6 to output
     
     // Close relay on each sensor to physically enable it
     output_high(SENSOR_RELAY);
+}
+/*
+ *  initSensors
+ *
+ *  Initializes the sensorIDs, sets the error counts and data values to 0 for
+ *  every temperature/voltage sensor, as well as the hall effect sensor.
+ */
+void initSensors(void) {
+    int i;
+
+    // Initialize volt/temp sensors
+    sensor[0].ID = 0x05;
+    sensor[1].ID = 0x0;
+    sensor[2].ID = 0x0;
+    sensor[3].ID = 0x0;
+    sensor[4].ID = 0x0;
+    sensor[5].ID = 0x0;
+    sensor[6].ID = 0x0;
+    sensor[7].ID = 0x0;
+    sensor[8].ID = 0x0;
+    sensor[9].ID = 0x0;
+    sensor[10].ID = 0x0;
+    sensor[11].ID = 0x0;
+    sensor[12].ID = 0x0;
+    sensor[13].ID = 0x0;
+
+    for (i=0; i<numSensors; i++) {
+        sensor[i].tempData = 0;
+        sensor[i].voltData = 0;
+        sensor[i].overTempCount = 0;
+        sensor[i].overVoltCount = 0;
+        sensor[i].underVoltCount = 0;
+    }
+    
+    // Initialize current sensor
+    hallSensor.data = 0xABCD;
+    hallSensor.overCount = 0;
+}
+
+void main(void) {
+    
+    setup();
+    
+    uint8 i;
+    uint8 warnFlag = 0;
+    uint8 errCode;
     
     while(1) {
         if (ms <= updateInterval)
@@ -189,57 +233,20 @@ void main(void) {
             
             if (IS_ERROR(errCode)) {
                 // Check if any of the counters have gone over the max count
-                if (sensor[i].overVoltCount >= maxErrorCount ||
-                    sensor[i].underVoltCount >= maxErrorCount ||
-                    sensor[i].overTempCount >= maxErrorCount) {
-                    
+                if (sensor[0].overVoltCount >= maxErrorCount ||
+                    sensor[0].underVoltCount >= maxErrorCount ||
+                    sensor[0].overTempCount >= maxErrorCount) {
+                    output_low(BATT_RELAY);
+                    output_low(MPPT_RELAY);                   
                 }
             }
         }
         
-        rawCurrentData = rawCurrentRetrieve();
+        rawCurrentData = getRawCurrentVal();
                 
         LCD_Send();
         CANBus_SendData();
     }
-}
-
-/*
- *  initSensors
- *
- *  Initializes the sensorIDs, sets the error counts and data values to 0 for
- *  every temperature/voltage sensor, as well as the hall effect sensor.
- */
-void initSensors(void) {
-    int i;
-
-    // Initialize volt/temp sensors
-    sensor[0].ID = 0x05;
-    sensor[1].ID = 0x0;
-    sensor[2].ID = 0x0;
-    sensor[3].ID = 0x0;
-    sensor[4].ID = 0x0;
-    sensor[5].ID = 0x0;
-    sensor[6].ID = 0x0;
-    sensor[7].ID = 0x0;
-    sensor[8].ID = 0x0;
-    sensor[9].ID = 0x0;
-    sensor[10].ID = 0x0;
-    sensor[11].ID = 0x0;
-    sensor[12].ID = 0x0;
-    sensor[13].ID = 0x0;
-
-    for (i=0; i<numSensors; i++) {
-        sensor[i].tempData = i*2+1;
-        sensor[i].voltData = i*4;
-        sensor[i].overTempCount = 0;
-        sensor[i].overVoltCount = 0;
-        sensor[i].underVoltCount = 0;
-    }
-    
-    // Initialize current sensor
-    hallSensor.data = 0xABCD;
-    hallSensor.overCount = 0;
 }
 
 /*
@@ -268,8 +275,7 @@ uint8 updateSensor(uint8 n) {
     
     // The behaviour when an error bit isn't set may be changed to decrement the
     // counter instead of reseting it.
-    
-    
+       
     if (err & VOLT_HIGH) {
         sensor[n].overVoltFlag = 1;
     
@@ -316,48 +322,6 @@ void LCD_Send(void) {
     //printf(lcd_putc, "Hello World!");
 }
 
-int setPacketData(int8 packet, uint8* data) {
-    uint16 i;
-    int packetLength = 8;
-    
-    if(packet == 0) {
-        data[0] = 0;
-        
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i-1].voltData>>2);
-    } else if (packet == 1) {
-        data[0] = (uint8)(rawCurrentData>>8);
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i+6].voltData>>2);
-    } else if (packet == 2) {
-        data[0] = (uint8)rawCurrentData;
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i-1].tempData>>2);
-    } else if (packet == 3) {
-        for(i = 0; i < 7; i++)
-            data[i] = (uint8)(sensor[i+7].tempData>>2);
-        data[7] = 0;
-    } else if (packet == 4) {
-        packetLength = 6;
-        
-        // Sensor 0 to 7
-        for (i = 0; i < 8; i++) {
-            data[0] |= sensor[i].overVoltFlag << i;
-            data[2] |= sensor[i].underVoltFlag << i;
-            data[4] |= sensor[i].overTempFlag << i;
-        }
-        
-        // Sensor 8 to 13
-        for (i = 0; i < 6; i++) {
-            data[1] |= sensor[i+8].overVoltFlag << i;
-            data[3] |= sensor[i+8].underVoltFlag << i;
-            data[5] |= sensor[i+8].overTempFlag << i;
-        }
-        
-        data[5] |= hallSensor.overFlag << 7;
-    }
-    return(packetLength);
-}
 /*
  *  CANBus_SendData
  *
@@ -386,6 +350,49 @@ int CANBus_SendData(void) {
     }
     
     return(response);
+}
+
+int setPacketData(int8 packet, uint8* data) {
+    uint16 i;
+    int packetLength = 8;
+    
+    if(packet == 0) {
+        data[0] = 0;
+        
+        for(i = 1; i < 8; i++)
+            data[i] = (uint8)(sensor[i-1].voltData>>2);
+    } else if (packet == 1) {
+        data[0] = (uint8)(rawCurrentData>>8);
+        for(i = 1; i < 8; i++)
+            data[i] = (uint8)(sensor[i+6].voltData>>2);
+    } else if (packet == 2) {
+        data[0] = (uint8)rawCurrentData;
+        for(i = 1; i < 8; i++)
+            data[i] = (uint8)(sensor[i-1].tempData>>2);
+    } else if (packet == 3) {
+        for(i = 0; i < 7; i++)
+            data[i] = (uint8)(sensor[i+7].tempData>>2);
+        data[7] = 0;
+    } else if (packet == 4) {
+        packetLength = 6;
+        
+        // Sensor 0 to 7
+        for (i = 0; i < 8; i++) {
+            data[0] |= sensor[i].overVoltFlag << (7 - i);
+            data[2] |= sensor[i].underVoltFlag << (7 - i);
+            data[4] |= sensor[i].overTempFlag << (7 - i);
+        }
+        
+        // Sensor 8 to 13
+        for (i = 0; i < 6; i++) {
+            data[1] |= sensor[i+8].overVoltFlag << (7 - i);
+            data[3] |= sensor[i+8].underVoltFlag << (7 - i);
+            data[5] |= sensor[i+8].overTempFlag << (7 - i);
+        }
+        
+        data[5] |= hallSensor.overFlag;
+    }
+    return(packetLength);
 }
 
 uint8 getErrCode(uint16 voltReading, uint16 tempReading) {
@@ -443,34 +450,9 @@ uint8 getHallErrorCode(uint16 hallReading) {
     }
     
     return ret;
-}
+} 
 
-int CANBus_SendError(uint8 errCode, uint8 n) {
-    uint8 out_data[3];
-    
-    if (errCode == NONE)
-        return 0;
-    
-    out_data[0] = errCode;
-
-    if (IS_CURRENT_CODE(errCode)) {
-        // error code is current error
-        out_data[1] = (uint8)(rawCurrentData >> 8); // MSByte
-        out_data[2] = (uint8)rawCurrentData;        // LSByte
-    } else {
-        // error code is voltage/temperature error
-        out_data[1] = n;
-        
-        if (IS_VOLT_CODE(errCode))
-            out_data[2] = sensor[n].voltData >> 2;
-        else if (IS_TEMP_CODE(errCode))
-            out_data[2] = sensor[n].tempData >> 2;
-    }
-    
-    return can_putd(tx_id,out_data,3,tx_pri,tx_ext,tx_rtr);
-}
-
-// See DS2764 datasheet - Voltage/Temperature Measurement
+//Retrieves and returns uint16 raw voltage or temperature value from sensor
 uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister) {
     uint8 loBits, hiBits;
     sensorNum<<=1;
@@ -496,17 +478,18 @@ uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister) {
     return(combineBytes(hiBits,loBits));
 }
 
-uint16 rawCurrentRetrieve(void) {
+//Retrieves and returns uint16 raw current value from hall effect sensor
+uint16 getRawCurrentVal(void) {
     uint16 rawCurrent;
     rawCurrent = read_adc();
-    //sensor result conversion pending
     
     return(rawCurrent);
 }
 
+//Combines the two bytes (uint8) received from sensor into one (uint16)
 uint16 combineBytes(uint8 high, uint8 low) {
-    // Quick bit masking sanity check to make sure we're never returning ints
-    // greater than 2^10
+    /* Quick bit masking sanity check to make sure we're never returning ints
+       greater than 2^10 */
     uint16 top = ((uint16)high << 3) & 0x03F8;
     uint16 bot = ((uint16)low >> 5) & 0x0007;
     
