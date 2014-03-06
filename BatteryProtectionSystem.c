@@ -1,7 +1,13 @@
 /* McMaster University Solar Car Club
  * Fireball II January 20 2014
  * Battery Protection Team
+ *
+ * Paul Correia
+ * Lun Li
  * -------------------------
+ * Version History:
+ *
+ * 03//2014 - Release Candidate
  */
 
 #include <18F26K80.h>   //Library for PIC used (18F26K80)
@@ -47,10 +53,10 @@
 #define VOLT_MAX_ERROR  860     // 4.2V
 #define VOLT_MIN_WARN   717     // 3.0V
 #define VOLT_MIN_ERROR  573     // 2.8V
-#define TEMP_CHARGE_MAX_WARN        200 // 40degC
-#define TEMP_CHARGE_MAX_ERROR       240 // 45degC
-#define TEMP_DISCHARGE_MAX_WARN     200 // 55degC
-#define TEMP_DISCHARGE_MAX_ERROR    240 // 60degC
+#define TEMP_CHARGE_MAX_WARN        225 // degC
+#define TEMP_CHARGE_MAX_ERROR       240 // degC
+#define TEMP_DISCHARGE_MAX_WARN     225 // 28degC
+#define TEMP_DISCHARGE_MAX_ERROR    240 // 30degC
 #define CURRENT_CHARGE_MAX_WARN         0 //to be announced
 #define CURRENT_CHARGE_MAX_ERROR        0
 #define CURRENT_DISCHARGE_MAX_WARN      0
@@ -100,26 +106,29 @@ const uint8 maxErrorCount = 4;
 const uint8 numSensors = 14;
 struct SensorData sensor[numSensors];
 struct HallEffectData hallSensor;
-uint16 rawCurrentData = 0xABCD; // can current be negative? yes, we talked about this
+uint16 rawCurrentData = 0xABCD;
 
 uint16 ms = 0;
 int8 packetNum = 0;
 
-const int32 tx_id = 0x002;  // bps id?
+const int32 tx_id = 0x002;  // To be changed later
 const int tx_pri = 3;
 const int1 tx_rtr = 0;
 const int1 tx_ext = 0;
 
-// Function prototypes (organize these)
+// Function prototypes
 void setup(void);
 void initSensors(void);
 uint8 updateSensor(uint8 n);
+
 void LCD_Send(void);
 int CANBus_SendData(void);
-int1 hallDischarge(void);
+int setPacketData(int8 packet, uint8* data);
+
 uint8 getErrCode(uint16 voltReading, uint16 tempReading);
 uint8 getHallErrorCode(uint16 hallReading);
-int setPacketData(int8 packet, uint8* data);
+int1 hallDischarge(void);
+
 uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister);
 uint16 getRawCurrentVal(void);
 uint16 combineBytes(uint8 high, uint8 low);
@@ -158,6 +167,7 @@ void setup(void) {
     // Close relay on each sensor to physically enable it
     output_high(SENSOR_RELAY);
 }
+
 /*
  *  initSensors
  *
@@ -169,7 +179,7 @@ void initSensors(void) {
 
     // Initialize volt/temp sensors
     sensor[0].ID = 0x05;
-    sensor[1].ID = 0x0;
+    sensor[1].ID = 0x15;
     sensor[2].ID = 0x0;
     sensor[3].ID = 0x0;
     sensor[4].ID = 0x0;
@@ -204,11 +214,14 @@ void main(void) {
     uint8 warnFlag = 0;
     uint8 errCode;
     
+    output_low(LED);
+    
     while(1) {
         if (ms <= updateInterval)
             continue;
         // else
         ms = 0;
+        output_low(LED);
         
         for(i = 0; i < numSensors; i++) {
             errCode = updateSensor(i);
@@ -229,15 +242,19 @@ void main(void) {
                  *   until every warning turns off, send a message when this
                  *   happens.
                  */
+                 
+                 //if (sensor[i].overTempCount >= maxErrorCount)
+                 output_high(LED);
             }
             
             if (IS_ERROR(errCode)) {
                 // Check if any of the counters have gone over the max count
-                if (sensor[0].overVoltCount >= maxErrorCount ||
-                    sensor[0].underVoltCount >= maxErrorCount ||
-                    sensor[0].overTempCount >= maxErrorCount) {
+                if (/*sensor[i].overVoltCount >= maxErrorCount ||
+                    sensor[i].underVoltCount >= maxErrorCount ||*/
+                    sensor[i].overTempCount >= maxErrorCount) {
                     output_low(BATT_RELAY);
-                    output_low(MPPT_RELAY);                   
+                    output_low(MPPT_RELAY);  
+                    output_high(LED); 
                 }
             }
         }
@@ -306,17 +323,6 @@ uint8 updateSensor(uint8 n) {
     return err;
 }
 
-/*
- *  hallDischarge
- *
- *  Return:
- *  1 if the hall sensor measures positive current, 0 otherwise
- *
- */
-int1 hallDischarge(void) {
-    return (hallSensor.data > 0);
-}
-
 // Send data to LCD
 void LCD_Send(void) {
     //printf(lcd_putc, "Hello World!");
@@ -345,8 +351,9 @@ int CANBus_SendData(void) {
     
     // Check if the data was written successfully
     if(response != 0xFF) {
-        output_toggle(LED);        
-        packetNum = (packetNum + 1) % 5;
+        //output_toggle(LED);    
+        packetNum = 2;
+        //packetNum = (packetNum + 1) % 5;
     }
     
     return(response);
@@ -399,15 +406,15 @@ uint8 getErrCode(uint16 voltReading, uint16 tempReading) {
     uint8 ret = NONE;
     uint16 tempWarnThresh, tempErrThresh;
     
-    if (voltReading > VOLT_MAX_WARN) {
+    if (voltReading >= VOLT_MAX_WARN) {
         ret |= VOLT_HIGH | WARN_BIT;
         
-        if (voltReading > VOLT_MAX_ERROR)
+        if (voltReading >= VOLT_MAX_ERROR)
             ret |= ERROR_BIT;
-    } else if (voltReading < VOLT_MIN_WARN){
+    } else if (voltReading <= VOLT_MIN_WARN){
         ret |= VOLT_LOW | WARN_BIT;
         
-        if (voltReading < VOLT_MIN_ERROR)
+        if (voltReading <= VOLT_MIN_ERROR)
             ret |= ERROR_BIT;
     }
         
@@ -419,10 +426,10 @@ uint8 getErrCode(uint16 voltReading, uint16 tempReading) {
         tempErrThresh = TEMP_CHARGE_MAX_ERROR;
     }
         
-    if (tempReading > tempWarnThresh) {
+    if (tempReading >= tempWarnThresh) {
         ret |= TEMP_HIGH | WARN_BIT;
         
-        if (tempReading > tempErrThresh)
+        if (tempReading >= tempErrThresh)
             ret |= ERROR_BIT;
     }
     
@@ -430,6 +437,7 @@ uint8 getErrCode(uint16 voltReading, uint16 tempReading) {
 }
 
 uint8 getHallErrorCode(uint16 hallReading) {
+
     uint8 ret = NONE;
     uint16 warnThresh, errThresh;
     
@@ -450,7 +458,18 @@ uint8 getHallErrorCode(uint16 hallReading) {
     }
     
     return ret;
-} 
+}
+
+/*
+ *  hallDischarge
+ *
+ *  Return:
+ *  1 if the hall sensor measures positive current, 0 otherwise
+ *
+ */
+int1 hallDischarge(void) {
+    return (hallSensor.data > 0);
+}
 
 //Retrieves and returns uint16 raw voltage or temperature value from sensor
 uint16 getRawSensorVal(uint8 sensorNum, uint8 sensorRegister) {
