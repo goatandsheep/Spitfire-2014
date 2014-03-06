@@ -7,6 +7,6 @@ This is the link to the Solar Car Room Drawer Inventory: http://goo.gl/nMddYb
 
 This is the link to the main Solar Car website: http://www.macsolarcar.com/
 
-If you are new to GitHub, don't fret-we have included a tutorial on how to use it.
+If you are new to GitHub, don't fret-we have included a tutorial on how to use it: http://goo.gl/4RcD2u
 
 Target Release date: End of February, 2014
