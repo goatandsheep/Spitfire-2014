@@ -19,24 +19,7 @@
 #define LCD_DB4   PIN_B0
 
 #define LCD_E     PIN_B4
-#define LCD_RS    PIN_B5
-//#define LCD_RW    PIN_C1
-
-/*
-#define LCD_DB4     PIN_A4
-#define LCD_DB5     PIN_A3
-#define LCD_DB6     PIN_A5
-#define LCD_DB7     PIN_B2
-
-#define LCD_E       PIN_A2
-#define LCD_RS      PIN_A1
-#define LCD_RW      PIN_A1
-*/
-// If you only want a 6-pin interface to your LCD, then
-// connect the R/W pin on the LCD to ground, and comment
-// out the following line.
-
-//#define USE_LCD_RW   1     
+#define LCD_RS    PIN_B5 
 
 //========================================
 

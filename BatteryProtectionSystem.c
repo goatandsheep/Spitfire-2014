@@ -26,9 +26,6 @@
 #FUSES NOPROTECT        // Code not protected from reading
 #FUSES CANC             // CANTX and CANRX pins are located on RC6 and RC7
 
-#include <can-18F4580_mscp.c>  //CAN library
-//#include <flex_lcd_PROT4-2.c>  //LCD library
-
 // Preprocessor Macros
 // uC pins
 #define LED             PIN_A5
@@ -100,6 +97,8 @@ typedef struct HallEffectData {
 
 #use delay(clock = 20000000)
 #use i2c(master, sda = I2C_SDA_PIN, scl = I2C_SCL_PIN)
+#include <can-18F4580_mscp.c>  //CAN library
+#include <flex_lcd_PROT6.c>  //LCD library
 
 const uint16 updateInterval = 1000; // ms
 const uint8 maxErrorCount = 4;
@@ -107,6 +106,11 @@ const uint8 numSensors = 14;
 struct SensorData sensor[numSensors];
 struct HallEffectData hallSensor;
 uint16 rawCurrentData = 0xABCD;
+
+// Keep track of sensor with greatest/least voltage and temperature, and their
+// corresponding sensor readings, so we can print them to the LCD
+uint16 minVolt, maxVolt, maxTemp;
+uint8 minVoltNum, maxVoltNum, maxTempNum;
 
 uint16 ms = 0;
 int8 packetNum = 0;
@@ -160,6 +164,7 @@ void setup(void) {
     enable_interrupts(GLOBAL);
     
     can_init();    //initialize CANBus
+    lcd_init();    //initialize LCD
     initSensors();  //set sensor IDs and default values
     
     set_tris_c((*0xF94 & 0xBF) | 0x80); // Set C7 to input, C6 to output
@@ -223,8 +228,26 @@ void main(void) {
         ms = 0;
         output_low(LED);
         
+        // Reset min and max volt/temp
+        minVolt=0xFFFF;
+        maxVolt=0;
+        maxTemp=0;
+        
         for(i = 0; i < numSensors; i++) {
             errCode = updateSensor(i);
+            
+            if (sensor[i].voltData > maxVolt) {
+                maxVolt = sensor[i].voltData;
+                maxVoltNum = i;
+            }
+            if (sensor[i].voltData < minVolt) {
+                minVolt = sensor[i].voltData;
+                minVoltNum = i;
+            }
+            if (sensor[i].tempData > maxTemp) {
+                maxTemp = sensor[i].tempData;
+                maxTempNum = i;
+            }
             
             // If the sensor is in the normal operating range, move on to the
             // next one
@@ -325,7 +348,28 @@ uint8 updateSensor(uint8 n) {
 
 // Send data to LCD
 void LCD_Send(void) {
-    //printf(lcd_putc, "Hello World!");
+    char buffer[32];
+    
+    sprintf(buffer, "V:%4.2f #%02d, v:%4.2f #%2d", 
+                    rawToVolt(maxVolt), maxVoltNum, 
+                    rawToVolt(minVolt), minVoltNum);
+    lcd_gotoxy(0,0);
+    printf(lcd_putc, buffer);
+    sprintf(buffer, "T:%4.1f #%02d, curr=%5.2f", 
+                    rawToTemp(maxTemp), maxTempN, 
+                    rawToCurr(hallSensor.data);
+    lcd_gotoxy(0,1);
+    printf(lcd_putc, buffer);
+}
+
+float rawToVolt(int16 rawVolt) {
+    return (float)rawVolt * 0.0048876;
+}
+float rawToTemp(int16 rawTemp) {
+    return (float)rawTemp/0.12414;
+}
+float rawToCurr(int16 rawCurr) {
+    return ((float)rawCurr - 32685.0) * 0.0014701;
 }
 
 /*
