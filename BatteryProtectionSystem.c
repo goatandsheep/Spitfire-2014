@@ -98,7 +98,7 @@ typedef struct HallEffectData {
 #use delay(clock = 20000000)
 #use i2c(master, sda = I2C_SDA_PIN, scl = I2C_SCL_PIN)
 #include <can-18F4580_mscp.c>  //CAN library
-#include <flex_lcd_PROT6.c>  //LCD library
+#include <flex_lcd_library.c>  //LCD library
 
 const uint16 updateInterval = 1000; // ms
 const uint8 maxErrorCount = 4;
