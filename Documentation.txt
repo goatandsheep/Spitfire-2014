@@ -57,36 +57,32 @@ MSB = Most Significant Byte
 LSB = Least Significant Byte
 
 Packet 4:
-All 8 bits of packet 0 and the first 6 bits of packet 1 correspond to the over
-voltage status of each of the 14 sensors. The last 2 bits of packet 2 are 0.
-All 8 bits of packet 2 and the first 6 bits of packet 3 correspond to the over
-voltage status of each of the 14 sensors. The last 2 bits of packet 2 are 0.
-All 8 bits of packet 4 and the first 6 bits of packet 5 correspond to the over
-temperature status of each of the 14 sensors. The last 2 bits of packet 2 are 0.
+All 8 bits of byte 0 and the first 6 bits of byte 1 correspond to the over 
+voltage status of each of the 14 sensors. The last 2 bits of byte 2 are 0. All
+8 bits of byte 2 and the first 6 bits of byte 3 correspond to the over voltage
+status of each of the 14 sensors. The last 2 bits of byte 2 are 0. All 8 bits of
+byte 4 and the first 6 bits of byte 5 correspond to the over temperature status
+of each of the 14 sensors. The last 2 bits of byte 2 are 0. The least 
+significant bit of byte 5 is the warning flag for the hall sensor.
 
 
 Encoding Example:
 
 data[0] = 0;
-data[0] |= sensor[0] << 7
-data[0] |= sensor[1] << 6
-data[0] |= sensor[2] << 5
-data[0] |= sensor[3] << 4
-data[0] |= sensor[4] << 3
-data[0] |= sensor[5] << 2
-data[0] |= sensor[6] << 1
-data[0] |= sensor[7] << 0
+data[0] |= sensor[0]  << 7
+...
+data[0] |= sensor[7]  << 0
+data[1] |= sensor[8]  << 5
+...
+data[1] |= sensor[12] << 1
 
 Decoding Example:
 
-sensor[0] = (data[0] >> 7) & 1
-sensor[1] = (data[0] >> 6) & 1
-sensor[2] = (data[0] >> 5) & 1
-sensor[3] = (data[0] >> 4) & 1
-sensor[4] = (data[0] >> 3) & 1
-sensor[5] = (data[0] >> 2) & 1
-sensor[6] = (data[0] >> 1) & 1
-sensor[7] = (data[0] >> 0) & 1
+sensor[0]  = (data[0] >> 7) & 1
+...
+sensor[7]  = (data[0] >> 0) & 1
+sensor[8]  = (data[1] >> 5) & 1
+sensor[12] = (data[1] >> 0) & 1
 
 When any sensors go over their thresholds (over voltage/under voltage/over
 temperature), their bit is set to 1. For example, if bytes 1 and 2 are set to
@@ -94,6 +90,6 @@ temperature), their bit is set to 1. For example, if bytes 1 and 2 are set to
 
 
 
-Last Modified March 5th, 2014.
+Last Modified March 10th, 2014.
 Paul Correia
 Lun Li
