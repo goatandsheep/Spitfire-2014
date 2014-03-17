@@ -13,6 +13,7 @@
 #define LCD_DB4   PIN_B0
 
 #define LCD_E     PIN_B4
+<<<<<<< HEAD
 #define LCD_RS    PIN_B5
 //#define LCD_RW    PIN_C1
 
@@ -22,6 +23,9 @@
  */
 
 //#define USE_LCD_RW   1     
+=======
+#define LCD_RS    PIN_B5 
+>>>>>>> FETCH_HEAD
 
 //========================================
 
