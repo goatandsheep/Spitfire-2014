@@ -48,7 +48,7 @@ Count=1
 2=can-18F4580_mscp.c
 [Opened Files]
 1=BatteryProtectionSystem.c
-2=
-3=can-18F4580_mscp.c
-4=can-18F4580_mscp.h
+2=BPS_LCD.c
+3=flex_lcd_PROT6.c
+4=
 5=
