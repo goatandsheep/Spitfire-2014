@@ -1,0 +1,25 @@
+Telemetry data
+
+BPS:
+Battery Voltage (total)
+Battery Temperature (average)
+Battery Current (total)
+
+Array current
+
+MPPT:
+array voltage
+
+Motor Controller
+motor speed (rpm)
+-car speed
+motor controller temperature
+motor current
+Regen?
+
+I2C:
+internal temperature
+
+Mech Brake Position
+Regen Brake Position
+Throttle Position
