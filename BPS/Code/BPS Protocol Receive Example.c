@@ -67,6 +67,7 @@ void main() {
    int rx_len;
    
    int i;
+   int16 j;
    
 
    //setup_timer_2(T2_DIV_BY_4,79,16);    //setup up timer2 to interrupt every 1ms if using 20Mhz clock
@@ -80,7 +81,14 @@ void main() {
    //enable_interrupts(INT_CANRX1);   //enable CAN FIFO receive interrupt
    enable_interrupts(INT_TIMER2);   //enable timer2 interrupt (if want to count ms)
    enable_interrupts(GLOBAL);       //enable all interrupts
-
+    int packetNum = 0;
+    int8 volt[14];
+    int8 temp[14];
+    int1 overVoltWarn[14];
+    int1 underVoltWarn[14];
+    int1 overTempWarn[14]; 
+    int1 overCurrWarn;
+    int16 curr;
     while(1) {
         delay_ms(10);
         
@@ -90,6 +98,46 @@ void main() {
         if (can_kbhit()) {
             // If data is waiting in buffer...
             if(can_getd(rx_id, in_data, rx_len, rxstat)) {
+                if(rx_len == 6) {
+                    packetNum = 4;
+                } else {
+                    if(in_data[0] == 0x00)
+                         packetNum = 0;
+                    if(in_data[7] == 0x00)
+                         packetNum = 3;
+                }
+                
+                if(packetNum == 0) {
+                    for(j = 0; j < 7; j++)
+                        volt[j] = in_data[j + 1];
+                } else if (packetNum == 1) {
+                    curr = in_data[0] << 8 | (curr&0xFF);
+                    for(j = 0; j < 7; j++)
+                        volt[j+7] = in_data[j + 1];
+                } else if (packetNum == 2) {
+                    curr |= in_data[0]&0xFF;
+                    for(j = 0; j < 7; j++)
+                        temp[j] = in_data[j + 1];
+                } else if (packetNum == 3) {
+                    for(j = 0; j < 7; j++)
+                        temp[j+7] = in_data[j];
+                } else if (packetNum == 4) {
+                    for(j = 0; j < 8; j++)
+                        overVoltWarn[j] = in_data[0]>>(7-j)&0x01;
+                    for(j = 0; j < 6; j++)
+                        overVoltWarn[j+8] = in_data[1]>>(5-j)&0x01;
+                    for(j = 0; j < 8; j++)
+                        underVoltWarn[j] = in_data[2]>>(7-j)&0x01;
+                    for(j = 0; j < 6; j++)
+                        underVoltWarn[j+8] = in_data[3]>>(5-j)0x01;
+                    for(j = 0; j < 8; j++)
+                        overTempWarn[j] = in_data[4]>>(7-j)&0x01;
+                    for(j = 0; j < 6; j++)
+                        overTempWarn[j] = in_data[5]>>(5-j)&0x01;
+                    overCurrWarn = in_data[5]&0x01;
+                }
+                packetNum++;
+                
                 // get data from buffer, and place it into the fields: rx_id, in_data, rx_len... etc
                 printf("RECIEVED: BUFF=%U ID=%3LX LEN=%U OVF=%U ", rxstat.buffer, rx_id, rx_len, rxstat.err_ovfl);
                 printf("FILT=%U RTR=%U EXT=%U INV=%U\r\n", rxstat.filthit, rxstat.rtr, rxstat.ext, rxstat.inv);

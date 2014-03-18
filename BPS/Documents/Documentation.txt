@@ -1,0 +1,95 @@
+Hall effect sensor calibration:
+Sensor measurement range:
+Sensor output range: 
+
+formula experimentally determined:
+read_adc() = 680.24 * current + 32685
+
+
+
+Voltage sensor calibration:
+Sensor measurement range:  0.00V .. 4.75V
+Sensor output range: 0 .. 1023
+
+Divide value from sensor by 1023 to normalize the range to 0.0 to 1.0, then 
+multiply by 5.0? to get the voltage reading from the sensor.
+
+
+Temperature Sensor Calibration:
+Sensor measurement range: -127°C .. 127°C
+Sensor output range: -1024 .. 1023
+
+Divide value from sensor by 1023 to normalize the range to -1.0 to 1.0, then 
+multiply by 127 to get the temperature reading from the sensor. This is 
+effectively the same as dividing by 8 or shifting 3 bits to the right or, 
+removing the 3 least significant bits.
+
+
+
+
+Battery Protection System CAN message protocol
+
+Sends 5 packets over the CAN line, packets are sent every 1000 milliseconds. The
+packets 0 to 3 have 8 bytes each, packet 4 has 6 bytes. 
+Byte 0 of Packet 0 is always 0x00, bytes 1..7 correspond to the voltage readings
+from sensors 0..6.
+Byte 0 of Packet 1 is the most significant byte of the hall sensor reading,
+bytes 1..7 correspond to the voltage readings from sensors 7..13.
+Byte 0 of Packet 2 is the least significant byte of the hall sensor reading,
+bytes 1..7 correspond to the temperature readings from sensors 0..6
+Bytes 0..6 of Packet 3 correspond to the temperature readings from sensors 7..13
+byte 7 is always 0x00
+
+
+Byte || Packet 0 | Packet 1 | Packet 2 | Packet 3 |
+-----++----------+----------+----------+----------+
+  0  ||   0x00   |  HS MSB  |  HS LSB  | 7 - Temp |
+  1  || 0 - Volt | 7 - Volt | 0 - Temp | 8 - Temp |
+  2  || 1 - Volt | 8 - Volt | 1 - Temp | 9 - Temp |
+  3  || 2 - Volt | 9 - Volt | 2 - Temp |10 - Temp |
+  4  || 3 - Volt |10 - Volt | 3 - Temp |11 - Temp |
+  5  || 4 - Volt |11 - Volt | 4 - Temp |12 - Temp |
+  6  || 5 - Volt |12 - Volt | 5 - Temp |13 - Temp |
+  7  || 6 - Volt |13 - Volt | 6 - Temp |   0x00   |
+
+HS  = Hall sensor
+MSB = Most Significant Byte
+LSB = Least Significant Byte
+
+Packet 4:
+All 8 bits of byte 0 and the first 6 bits of byte 1 correspond to the over 
+voltage status of each of the 14 sensors. The last 2 bits of byte 2 are 0. All
+8 bits of byte 2 and the first 6 bits of byte 3 correspond to the over voltage
+status of each of the 14 sensors. The last 2 bits of byte 2 are 0. All 8 bits of
+byte 4 and the first 6 bits of byte 5 correspond to the over temperature status
+of each of the 14 sensors. The last 2 bits of byte 2 are 0. The least 
+significant bit of byte 5 is the warning flag for the hall sensor.
+
+
+Encoding Example:
+
+data[0] = 0;
+data[0] |= sensor[0]  << 7
+...
+data[0] |= sensor[7]  << 0
+data[1] |= sensor[8]  << 5
+...
+data[1] |= sensor[12] << 1
+
+Decoding Example:
+
+sensor[0]  = (data[0] >> 7) & 1
+...
+sensor[7]  = (data[0] >> 0) & 1
+sensor[8]  = (data[1] >> 5) & 1
+sensor[12] = (data[1] >> 0) & 1
+
+When any sensors go over their thresholds (over voltage/under voltage/over
+temperature), their bit is set to 1. For example, if bytes 1 and 2 are set to
+0x04 and 0x00 respecively, then sensor 4 is in over voltage warning mode.
+
+
+
+Last Modified March 10th, 2014.
+Paul Correia
+Lun Li
