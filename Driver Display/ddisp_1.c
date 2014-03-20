@@ -94,10 +94,20 @@ void main() {
          delay_ms(500);
          */
     }
-    
-    
 }
 
+int1 BPSWarn[4];
+void setBPSWarn() {
+    BPSWarn = {0,0,0,0};
+    if(in_data[0] | in_data[1]&0xFC)
+        BPSWarn[0] = 1;
+    if(in_data[2] | in_data[3]&0xFC)
+        BPSWarn[1] = 1;
+    if(in_data[4] | in_data[5]&0xFC)
+        BPSWarn[2] = 1;
+    if(in_data[5]&0x01)
+        BPSWarn[3] = 1;    
+}
 
 void update(signed int8 data){
     int msb=0;
