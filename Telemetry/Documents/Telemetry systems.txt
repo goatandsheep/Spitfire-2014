@@ -5,16 +5,22 @@ Battery Voltage (total)
 Battery Temperature (average)
 Battery Current (total)
 
-Array current
+MPPT (x4-6):
+Array current (in)
+Array voltage (in + out)
 
-MPPT:
-array voltage
+Motor Controller:
+Motor speed (rpm)
+Vehicle Speed (m/s)
+Internal Permanent Magnet temperature
+Motor temperature
+Board temperature
+Motor current
+Motor voltage
+Bus current
+Bus voltage
+15V, 3.3V, 1.9V Voltage Rail (optional)
 
-Motor Controller
-motor speed (rpm)
--car speed
-motor controller temperature
-motor current
 Regen?
 
 I2C:
