@@ -52,7 +52,7 @@ int driver2[] = {0x00, 0x00};//Right bar graph,other lights
 int driver3[] = {0x00, 0x00};//Right seg,Left seg
 int barL[] = {0x00,0x01,0x03,0x07,0x0F,0x1F,0x3F,0x7F,0xFF};
 int barR[] = {0x00,0x80,0xC0,0xE0,0xF0,0xF8,0xFC,0xFE,0xFF};
-int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6, 0x2C, 0xBA}; //0-9,L,H
+int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6}; // 0-9
 int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
@@ -188,20 +188,33 @@ void flash() {
  *
  *  barL    - number between 0 and 8 inclusive
  *  barR    - number between 0 and 8 inclusive
- *  misc1   -
- *  misc2   -
- *  seg     -
+ *  misc1   - misc lights on top
+ *  misc2   - misc lights on bottom
+ *  seg     - number to be displayed on the 7SD
  */
-void writeDisplay(uint8 barL, uint8 barR, uint8 misc1, uint8 misc2, uint8 seg) {
-    
+void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 segNum) {
+    uint8 lSeg;
+    uint8 rSeg;
 
-    spi_write(0x00);        // Misc lights
-    spi_write(barL[8]);     // barL
-    spi_write(barR[8]);     // barR
-    spi_write(0x00);        // Misc lights
-    spi_write(segR[lsb]);   // Right Seg
-    spi_write(segL[msb]);   // Left Seg
+    if (segNum < 0) {
+        lSeg = segChar[0];      // L
+        rSeg = segChar[1];      // O
+    } else if (segNum > 99) {
+        lSeg = segChar[2];      // H
+        rSeg = segChar[3];      // I
+    } else {
+        lSeg = segment[segNum / 10];
+        rSeg = segment[segNum % 10];
+    }
+
+    spi_write(misc1);               // Misc lights
+    spi_write(barL[lBarN]);         // Left Bar
+    spi_write(barR[rBarN]);         // Right Bar
+    spi_write(misc2);               // Misc lights
+    spi_write(swapNibble(rSeg));    // Right Seg
+    spi_write(lSeg);                // Left Seg
     
+    //
     output_high(LE);
     delay_ms(1);
     output_low(LE);
