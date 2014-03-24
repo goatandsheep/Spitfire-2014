@@ -29,26 +29,6 @@
 typedef unsigned int8 uint8;
 typedef unsigned int16 uint16;
 
-/*
- * 7 segment display bit mapping:
- * ex: bit 2 corresponds to 0x04
- *
- *   6666
- *  5    7
- *  5    7
- *  5    7
- *  5    7
- *   4444
- *  3    1
- *  3    1
- *  3    1
- *  3    1
- *   2222  0
- *
- * Note that the bytes on the right
- *
- */
-
 //LED Driver Bytes
 int driver1[] = {0x00, 0x00};//other lights,Left bar
 int driver2[] = {0x00, 0x00};//Right bar graph,other lights
@@ -59,10 +39,6 @@ int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6}; // 0-9
 int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
-int1 BPSWarn[4];
-
-void update(signed int8 data);//write speed prototype
-void flash(signed int8 data); //flash LEDs prototype
 
 void main() {
     setup_adc(ADC_CLOCK_DIV_32);
@@ -104,101 +80,18 @@ void main() {
     }
 }
 
-void setBPSWarn() {
-    BPSWarn = {0,0,0,0};
-    if(in_data[0] | in_data[1]&0xFC)
-        BPSWarn[0] = 1;
-    if(in_data[2] | in_data[3]&0xFC)
-        BPSWarn[1] = 1;
-    if(in_data[4] | in_data[5]&0xFC)
-        BPSWarn[2] = 1;
-    if(in_data[5]&0x01)
-        BPSWarn[3] = 1;    
-}
-
-void update(signed int8 data){
-    int msb=0;
-    int lsb=0;
-    
-    int leftB = 1;
-    int rightB = 1;
-    int BSDial = data>>5;
-    
-    
-    if(data < 0) {  //speed less than 0 error
-        msb = 10;   //displays E
-        lsb = 10;   //displays r
-    }
-    else if(data>=100){  //fix double digit spillover
-        //data=data-100;//display as a two digit number
-        
-        msb = 11;   //displays H
-        lsb = 11;   //displays i
-    }
-    else {          //seperate digits
-        msb = data/10;
-        lsb = (int)(data-msb*10);
-    }
-    
-    
-    //SPI writes to the drivers
-    spi_write(0x00);//misc lights
-    spi_write(barL[BSDial]);//barL
-    spi_write(barR[BSDial]);//barR
-    spi_write(0x00);//misc lights
-    spi_write(segR[lsb]);//Right Seg
-    spi_write(segL[msb]);//Left Seg
-    
-    output_high(LE);
-    delay_ms(1);
-    output_low(LE);
-}
-
-
-
-void flash() {
-    int msb=0;
-    int lsb=0;
-    
-    if(data < 0){           // speed less than 0 error
-        msb = 10;           // displays E
-        lsb = 10;           // displays r
-    }
-    else if(data>=100) {    // fix double digit spillover
-        msb = 11;           // displays H
-        lsb = 11;           // displays i
-    }
-    else {                  // seperate digits
-        msb = data/10;
-        lsb = data%10;
-    }
-    
-    
-    spi_write(0x00);        // Misc lights
-    spi_write(barL[8]);     // barL
-    spi_write(barR[8]);     // barR
-    spi_write(0x00);        // Misc lights
-    spi_write(segR[lsb]);   // Right Seg
-    spi_write(segL[msb]);   // Left Seg
-    
-    output_high(LE);
-    delay_ms(1);
-    output_low(LE);
-    
-    delay_ms(500);
-    
-    spi_write(0x00);//misc lights
-    spi_write(barL[0]);//barL
-    spi_write(barR[0]);//barR
-    spi_write(0x00);//misc lights
-    spi_write(segR[lsb]);//Right Seg
-    spi_write(segL[msb]);//Left Seg
-    
-    output_high(LE);
-    delay_ms(1);
-    output_low(LE);
-    
-    delay_ms(250);
+/*  setBPSWarn()
+ *
+ *  in_data - array of ???
+ *
+ *  Lun pls comment
+ */
+void setBPSWarn(uint8 in_data[4]) {
+    int1 BPSWarn[4];
+    BPSWarn[0] = in_data[0] | in_data[1]&0xFC;
+    BPSWarn[1] = in_data[2] | in_data[3]&0xFC;
+    BPSWarn[2] = in_data[4] | in_data[5]&0xFC;
+    BPSWarn[4] = 1;
 }
 
 /*  writeDisplay()
@@ -207,9 +100,9 @@ void flash() {
  *  barR    - number between 0 and 8 inclusive
  *  misc1   - misc lights on top
  *  misc2   - misc lights on bottom
- *  seg     - number to be displayed on the 7SD
+ *  num     - number to be displayed on the 7SD
  */
-void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 segNum) {
+void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) {
     uint8 lSeg;
     uint8 rSeg;
 
@@ -220,8 +113,8 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 segNu
         lSeg = segChar[2];      // H
         rSeg = segChar[3];      // I
     } else {
-        lSeg = segment[segNum / 10];
-        rSeg = segment[segNum % 10];
+        lSeg = segment[num / 10];
+        rSeg = segment[num % 10];
     }
 
     spi_write(misc1);               // Misc lights
@@ -231,13 +124,19 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 segNu
     spi_write(swapNibble(rSeg));    // Right Seg
     spi_write(lSeg);                // Left Seg
     
-    //
+    // What is this and why?
     output_high(LE);
     delay_ms(1);
     output_low(LE);
 }
 
-
+/*  swapNibble()
+ *
+ *  a - 8bit number to be swapped
+ *
+ *  Returns:
+ *  Last four bits of a, then first four bits of a, in one byte 
+ */
 uint8 swapNibble(uint8 a) {
     return (a << 4) | ((a >> 4) & 0x0F);
 }

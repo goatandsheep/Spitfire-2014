@@ -7,7 +7,7 @@
  * -------------------------
  * Version History:
  *
- * 03//2014 - Release Candidate
+ * 03/24/2014 - Uncalibrated Beta
  */
 
 #include <18F26K80.h>   //Library for PIC used (18F26K80)
