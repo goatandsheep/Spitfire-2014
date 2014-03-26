@@ -30,27 +30,25 @@ removing the 3 least significant bits.
 Battery Protection System CAN message protocol
 
 Sends 5 packets over the CAN line, packets are sent every 1000 milliseconds. The
-packets 0 to 3 have 8 bytes each, packet 4 has 6 bytes. 
-Byte 0 of Packet 0 is always 0x00, bytes 1..7 correspond to the voltage readings
-from sensors 0..6.
-Byte 0 of Packet 1 is the most significant byte of the hall sensor reading,
-bytes 1..7 correspond to the voltage readings from sensors 7..13.
-Byte 0 of Packet 2 is the least significant byte of the hall sensor reading,
-bytes 1..7 correspond to the temperature readings from sensors 0..6
-Bytes 0..6 of Packet 3 correspond to the temperature readings from sensors 7..13
-byte 7 is always 0x00
+packets 0 to 2 have 8 bytes each, packet 3 and 4 have 6 bytes each. 
+Bytes 0..7 from packet 0 correspond to the voltage readings from sensors 0..7.
+Bytes 0..5 from packet 1 correspond to the voltage readings from sensors 8..13.
+Byte 6 from packet 1 corresponds to the most significant bit of the hall sensor.
+Byte 7 from packet 1 corresponds to the least significant bit of the hall sensor.
+Bytes 0..7 from packet 2 correspond to the voltage readings from sensors 0..7.
+Bytes 0..5 from packet 3 correspond to the voltage readings from sensors 8..13.
 
 
 Byte || Packet 0 | Packet 1 | Packet 2 | Packet 3 |
 -----++----------+----------+----------+----------+
-  0  ||   0x00   |  HS MSB  |  HS LSB  | 7 - Temp |
-  1  || 0 - Volt | 7 - Volt | 0 - Temp | 8 - Temp |
-  2  || 1 - Volt | 8 - Volt | 1 - Temp | 9 - Temp |
-  3  || 2 - Volt | 9 - Volt | 2 - Temp |10 - Temp |
-  4  || 3 - Volt |10 - Volt | 3 - Temp |11 - Temp |
-  5  || 4 - Volt |11 - Volt | 4 - Temp |12 - Temp |
-  6  || 5 - Volt |12 - Volt | 5 - Temp |13 - Temp |
-  7  || 6 - Volt |13 - Volt | 6 - Temp |   0x00   |
+  0  || 0 - Volt | 8 - Volt | 0 - Temp | 8 - Temp |
+  1  || 1 - Volt | 9 - Volt | 1 - Temp | 9 - Temp |
+  2  || 2 - Volt |10 - Volt | 2 - Temp |10 - Temp |
+  3  || 3 - Volt |11 - Volt | 3 - Temp |11 - Temp |
+  4  || 4 - Volt |12 - Volt | 4 - Temp |12 - Temp |
+  5  || 5 - Volt |13 - Volt | 5 - Temp |13 - Temp |
+  6  || 6 - Volt |  HS MSB  | 6 - Temp |          |
+  7  || 7 - Volt |  HS LSB  | 7 - Temp |          |
 
 HS  = Hall sensor
 MSB = Most Significant Byte
@@ -90,6 +88,6 @@ temperature), their bit is set to 1. For example, if bytes 1 and 2 are set to
 
 
 
-Last Modified March 10th, 2014.
+Last Modified March 26th, 2014.
 Paul Correia
 Lun Li

@@ -1,9 +1,9 @@
 Telemetry data
 
 BPS:
-Battery Voltage (total)
-Battery Temperature (average)
-Battery Current (total)
+Battery Voltage (each)
+Battery Temperature (each)
+Battery Current
 
 MPPT (x4-6):
 Array current (in)
@@ -11,21 +11,21 @@ Array voltage (in + out)
 
 Motor Controller:
 Motor speed (rpm)
-Vehicle Speed (m/s)
 Internal Permanent Magnet temperature
 Motor temperature
 Board temperature
-Motor current
-Motor voltage
-Bus current
-Bus voltage
-15V, 3.3V, 1.9V Voltage Rail (optional)
+Bus current (id 2)
+Bus voltage (id 2)
+Status Information
+Odometer
+
 
 Regen?
 
 I2C:
-internal temperature
+Internal Temperature
 
+EV Driver Controls:b 
 Mech Brake Position
 Regen Brake Position
 Throttle Position
