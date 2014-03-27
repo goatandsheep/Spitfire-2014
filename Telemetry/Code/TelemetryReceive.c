@@ -149,8 +149,8 @@ int8 getTemp(void) {
 }
 
 void printData(void) {
-    printf("MotorSpeed: %4.1f VehicleSpeed: %4.1f\r\n", motorSpeed, vehicleSpeed);
+   /* printf("MotorSpeed: %4.1f VehicleSpeed: %4.1f\r\n", motorSpeed, vehicleSpeed);
     printf("MotorVolt: %4.1f MotorCurr: %4.1f\r\n", motorVoltage, motorCurrent);
     printf("BusVolt: %4.1f BusCurr: %4.1f\r\n", busVoltage, busCurrent);
-    printf("MotorTemp: %4.1f BoardTemp: %4.1f IPMTemp: %4.1f\r\n\n", motorTemp, boardTemp, IPMTemp);
+    printf("MotorTemp: %4.1f BoardTemp: %4.1f IPMTemp: %4.1f\r\n\n", motorTemp, boardTemp, IPMTemp);*/
 }

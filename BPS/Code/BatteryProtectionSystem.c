@@ -254,27 +254,14 @@ void main(void) {
             if (errCode == NONE)
                 continue;
             
-            if (IS_WARNING(errCode)) {
-                /* I don't think we've fully decided on the functionality here.
-                 * Here are a few possibilities:
-                 * - Send a message every time a new warning turns on and every
-                 *   time the warning turns off.
-                 * - Send a message every time a new warning turns on and send
-                 *   a message when every warning finally turns off.
-                 * - Send a warning when a warning turns on, don't send again
-                 *   until every warning turns off, send a message when this
-                 *   happens.
-                 */
-                 
-                 //if (sensor[i].overTempCount >= maxErrorCount)
-                 output_high(LED);
-            }
-            
             if (IS_ERROR(errCode)) {
                 // Check if any of the counters have gone over the max count
-                if (/*sensor[i].overVoltCount >= maxErrorCount ||
-                    sensor[i].underVoltCount >= maxErrorCount ||*/
+                if (sensor[i].overVoltCount >= maxErrorCount ||
+                    sensor[i].underVoltCount >= maxErrorCount ||
                     sensor[i].overTempCount >= maxErrorCount) {
+                    // If ANY of the sensors have an error, turn off the relays
+                    // They can never be turned back on until the program is
+                    // reset.
                     output_low(BATT_RELAY);
                     output_low(MPPT_RELAY);  
                     output_high(LED); 
