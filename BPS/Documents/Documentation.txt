@@ -1,11 +1,35 @@
+Mcmaster Solar Car Project
+Spitfire 2014
+Battery Protection System
+Written by Correia, Paul and Li, Lun
+
+Abstract
+    The Battery Protection System (BPS) serves two functions. The first is to
+monitor the state of the battery packs used in the solar vehicle, the individual
+voltages and temperatures of each battery module as well as the total current of
+the battery system. Voltages and temperature will be measured by a combined
+sensor attached to the outside of each battery module, while the current will be
+measured via a Hall Effect sensor. Should the voltage of any battery be over or
+under a dangerous threshhold, the temperature of any battery be over a dangerous
+threshhold, or if the current be over a dangerous threshhold, the BPS system 
+will shut down power flow via two kilovac relays for the motor and MPPT. The 
+second task of the BPS is to send data via CANBus containing data about the
+temperatures and voltages of each battery and the current, as well as if any 
+value is nearing the acceptable threshhold(See error codes). This data will be 
+received by the driver display and telemetry systems.
+
+
+Calibration and DataSheet results
+    This section underlines the calibration results from the Hall Effect sensor
+and information from the DataSheets necessary to interpret and parse the info
+given by the sensors.
+
 Hall effect sensor calibration:
 Sensor measurement range:
 Sensor output range: 
 
-formula experimentally determined:
+Formula experimentally determined:
 read_adc() = 680.24 * current + 32685
-
-
 
 Voltage sensor calibration:
 Sensor measurement range:  0.00V .. 4.75V
@@ -13,7 +37,6 @@ Sensor output range: 0 .. 1023
 
 Divide value from sensor by 1023 to normalize the range to 0.0 to 1.0, then 
 multiply by 5.0? to get the voltage reading from the sensor.
-
 
 Temperature Sensor Calibration:
 Sensor measurement range: -127°C .. 127°C
@@ -25,12 +48,9 @@ effectively the same as dividing by 8 or shifting 3 bits to the right or,
 removing the 3 least significant bits.
 
 
-
-
 Battery Protection System CAN message protocol
-
-Sends 5 packets over the CAN line, packets are sent every 1000 milliseconds. The
-packets 0 to 2 have 8 bytes each, packet 3 and 4 have 6 bytes each. 
+    Sends 5 packets over the CAN line, packets are sent every 1000 milliseconds
+The packets 0 to 2 have 8 bytes each, packet 3 and 4 have 6 bytes each.
 Bytes 0..7 from packet 0 correspond to the voltage readings from sensors 0..7.
 Bytes 0..5 from packet 1 correspond to the voltage readings from sensors 8..13.
 Byte 6 from packet 1 corresponds to the most significant bit of the hall sensor.
@@ -39,14 +59,14 @@ Bytes 0..7 from packet 2 correspond to the voltage readings from sensors 0..7.
 Bytes 0..5 from packet 3 correspond to the voltage readings from sensors 8..13.
 
 
-Byte || Packet 0 | Packet 1 | Packet 2 | Packet 3 |
------++----------+----------+----------+----------+
-  0  || 0 - Volt | 8 - Volt | 0 - Temp | 8 - Temp |
-  1  || 1 - Volt | 9 - Volt | 1 - Temp | 9 - Temp |
-  2  || 2 - Volt |10 - Volt | 2 - Temp |10 - Temp |
-  3  || 3 - Volt |11 - Volt | 3 - Temp |11 - Temp |
-  4  || 4 - Volt |12 - Volt | 4 - Temp |12 - Temp |
-  5  || 5 - Volt |13 - Volt | 5 - Temp |13 - Temp |
+Byte || Packet 0 | Packet 1 | Packet 2 | Packet 3 | Packet 4 |
+-----++----------+----------+----------+----------+-----------------
+  0  || 0 - Volt | 8 - Volt | 0 - Temp | 8 - Temp |OVERVOLT  0 - 7
+  1  || 1 - Volt | 9 - Volt | 1 - Temp | 9 - Temp |OVERVOLT  8 - 13
+  2  || 2 - Volt |10 - Volt | 2 - Temp |10 - Temp |UNDERVOLT 0 - 7
+  3  || 3 - Volt |11 - Volt | 3 - Temp |11 - Temp |UNDERVOLT 8 - 13
+  4  || 4 - Volt |12 - Volt | 4 - Temp |12 - Temp |OVERTEMP  0 - 7
+  5  || 5 - Volt |13 - Volt | 5 - Temp |13 - Temp |OVERTEMP  8 - 13 & OVERCURRENT
   6  || 6 - Volt |  HS MSB  | 6 - Temp |          |
   7  || 7 - Volt |  HS LSB  | 7 - Temp |          |
 
