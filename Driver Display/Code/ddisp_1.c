@@ -22,7 +22,13 @@
 #define LE PIN_C0
 #define OE PIN_C1
 #define BUZZER PIN_C2
-//#define LED PIN_A5
+
+#define BPS_ID 0x800
+#define BPS_VOLT1 BPS_ID + 1
+#define BPS_VOLT2 BPS_ID + 2
+#define BPS_TEMP1 BPS_ID + 3
+#define BPS_TEMP2 BPS_ID + 4
+#define BPS_ERROR BPS_ID + 5
 
 #include <can-18F4580_mscp.c>  // Modified CAN library includes default FIFO mode, timing settings match MPPT, 11-bit instead of 24-bit addressing
 // Typedefs
@@ -40,7 +46,14 @@ int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
 
+int1 BPSWarn[4];
+
 void main() {
+    struct rx_stat rxstat;
+    int32 rx_id;
+    int8 in_data[8];
+    int rx_len;
+    
     setup_adc(ADC_CLOCK_DIV_32);
     setup_adc_ports(sAN10|VSS_VDD);
     set_adc_channel(10);
@@ -52,9 +65,9 @@ void main() {
     
     can_init();
     set_tris_b((*0xF93 & 0xFB) | 0x08);  //b3 is out, b2 is in (default)
-    //set_tris_c((*0xF94 & 0xBF) | 0x80);  //c6 is out, c7 is in (if using #FUSES CANC)
     
     while(1){
+
         output_high(RTS);
         dial = read_adc(); //pot2 is 16bit [0,65535]
         
@@ -65,18 +78,20 @@ void main() {
         if (can_kbhit()) {
             // If data is waiting in buffer...
             if(can_getd(rx_id, in_data, rx_len, rxstat)) {
-
-                // get data from buffer, and place it into the fields: rx_id, in_data, rx_len... etc
+                
+                if(rx_id == BPS_ERROR) {
+                    setBPSWarn(in_data);
+                }
+                /** get data from buffer, and place it into the fields: rx_id, in_data, rx_len... etc
                 printf("RECIEVED: BUFF=%U ID=%3LX LEN=%U OVF=%U ", rxstat.buffer, rx_id, rx_len, rxstat.err_ovfl);
                 printf("FILT=%U RTR=%U EXT=%U INV=%U\r\n", rxstat.filthit, rxstat.rtr, rxstat.ext, rxstat.inv);
                 printf("\tDATA = ");
                 for (i=0;i<rx_len;i++)
-                    printf("%02X ", in_data[i]);
+                    printf("%02X ", in_data[i]); */
             } else {
-                printf("FAIL on can_getd");
+                
             }           
-            printf("\r\n");
-        }
+        }                  
     }
 }
 
@@ -84,14 +99,13 @@ void main() {
  *
  *  in_data - array of ???
  *
- *  Lun pls comment
+ *  Lun pls comment why?
  */
-void setBPSWarn(uint8 in_data[4]) {
-    int1 BPSWarn[4];
+void setBPSWarn(int8 in_data[6]) {
     BPSWarn[0] = in_data[0] | in_data[1]&0xFC;
     BPSWarn[1] = in_data[2] | in_data[3]&0xFC;
     BPSWarn[2] = in_data[4] | in_data[5]&0xFC;
-    BPSWarn[4] = 1;
+    BPSWarn[3] = in_data[5]&0x01;
 }
 
 /*  writeDisplay()

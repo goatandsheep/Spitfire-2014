@@ -390,43 +390,46 @@ int CANBus_SendData(void) {
     return(response);
 }
 
-int setPacketData(int8 packet, uint8* data) {
+int setPacketData(int8 packetNum, uint8* data) {
     uint16 i;
     int packetLength = 8;
     
-    if(packet == 0) {       
+    switch(packetNum) { 
+    case 0:
         for(i = 0; i < 8; i++)
             data[i] = (uint8)(sensor[i].voltData>>2);
-    } else if (packet == 1) {
+        break;
+    case 1:
         for(i = 0; i < 6; i++)
             data[i] = (uint8)(sensor[i+8].voltData>>2);
         data[7] = (uint8)(rawCurrentData>>8);
         data[8] = (uint8)rawCurrentData;
-    } else if (packet == 2) {
+        break;
+    case 2:
         for(i = 0; i < 8; i++)
             data[i] = (uint8)(sensor[i].tempData>>2);
-    } else if (packet == 3) {
+        break;
+    case 3:
+        packetLength = 6;
         for(i = 0; i < 6; i++)
             data[i] = (uint8)(sensor[i+8].tempData>>2);
-        packetLength = 6;
-    } else if (packet == 4) {
-        packetLength = 6;
-        
+        break;
+    case 4:
+        packetLength = 6;        
         // Sensor 0 to 7
         for (i = 0; i < 8; i++) {
             data[0] |= sensor[i].overVoltFlag << (7 - i);
             data[2] |= sensor[i].underVoltFlag << (7 - i);
             data[4] |= sensor[i].overTempFlag << (7 - i);
-        }
-        
+        }        
         // Sensor 8 to 13
         for (i = 0; i < 6; i++) {
             data[1] |= sensor[i+8].overVoltFlag << (7 - i);
             data[3] |= sensor[i+8].underVoltFlag << (7 - i);
             data[5] |= sensor[i+8].overTempFlag << (7 - i);
-        }
-        
+        }        
         data[5] |= hallSensor.overFlag;
+        break;
     }
     return(packetLength);
 }
