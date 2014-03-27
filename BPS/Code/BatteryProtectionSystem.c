@@ -115,7 +115,7 @@ uint8 minVoltNum, maxVoltNum, maxTempNum;
 uint16 ms = 0;
 int8 packetNum = 0;
 
-const int32 tx_id = 0x002;  // To be changed later
+const int32 tx_id = 0x800;  // To be changed later
 const int tx_pri = 3;
 const int1 tx_rtr = 0;
 const int1 tx_ext = 0;
@@ -391,7 +391,7 @@ int CANBus_SendData(void) {
     uint8 out_data[8] = {0,0,0,0,0,0,0,0};
     
     tx_len = setPacketData(packetNum, out_data);
-    response = can_putd(tx_id,out_data,tx_len,tx_pri,tx_ext,tx_rtr);
+    response = can_putd(tx_id+packetNum,out_data,tx_len,tx_pri,tx_ext,tx_rtr);
     
     // Check if the data was written successfully
     if(response != 0xFF) {
@@ -407,23 +407,21 @@ int setPacketData(int8 packet, uint8* data) {
     uint16 i;
     int packetLength = 8;
     
-    if(packet == 0) {
-        data[0] = 0;
-        
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i-1].voltData>>2);
+    if(packet == 0) {       
+        for(i = 0; i < 8; i++)
+            data[i] = (uint8)(sensor[i].voltData>>2);
     } else if (packet == 1) {
-        data[0] = (uint8)(rawCurrentData>>8);
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i+6].voltData>>2);
+        for(i = 0; i < 6; i++)
+            data[i] = (uint8)(sensor[i+8].voltData>>2);
+        data[7] = (uint8)(rawCurrentData>>8);
+        data[8] = (uint8)rawCurrentData;
     } else if (packet == 2) {
-        data[0] = (uint8)rawCurrentData;
-        for(i = 1; i < 8; i++)
-            data[i] = (uint8)(sensor[i-1].tempData>>2);
+        for(i = 0; i < 8; i++)
+            data[i] = (uint8)(sensor[i].tempData>>2);
     } else if (packet == 3) {
-        for(i = 0; i < 7; i++)
-            data[i] = (uint8)(sensor[i+7].tempData>>2);
-        data[7] = 0;
+        for(i = 0; i < 6; i++)
+            data[i] = (uint8)(sensor[i+8].tempData>>2);
+        packetLength = 6;
     } else if (packet == 4) {
         packetLength = 6;
         
