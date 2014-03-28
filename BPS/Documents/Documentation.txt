@@ -10,12 +10,12 @@ voltages and temperatures of each battery module as well as the total current of
 the battery system. Voltages and temperature will be measured by a combined
 sensor attached to the outside of each battery module, while the current will be
 measured via a Hall Effect sensor. Should the voltage of any battery be over or
-under a dangerous threshhold, the temperature of any battery be over a dangerous
-threshhold, or if the current be over a dangerous threshhold, the BPS system 
+under a dangerous threshold, the temperature of any battery be over a dangerous
+threshold, or if the current be over a dangerous threshold, the BPS system 
 will shut down power flow via two kilovac relays for the motor and MPPT. The 
 second task of the BPS is to send data via CANBus containing data about the
 temperatures and voltages of each battery and the current, as well as if any 
-value is nearing the acceptable threshhold(See error codes). This data will be 
+value is nearing the acceptable threshold(See error codes). This data will be 
 received by the driver display and telemetry systems.
 
 
@@ -59,16 +59,32 @@ Bytes 0..7 from packet 2 correspond to the voltage readings from sensors 0..7.
 Bytes 0..5 from packet 3 correspond to the voltage readings from sensors 8..13.
 
 
-Byte || Packet 0 | Packet 1 | Packet 2 | Packet 3 | Packet 4 |
------++----------+----------+----------+----------+-----------------
-  0  || 0 - Volt | 8 - Volt | 0 - Temp | 8 - Temp |OVERVOLT  0 - 7
-  1  || 1 - Volt | 9 - Volt | 1 - Temp | 9 - Temp |OVERVOLT  8 - 13
-  2  || 2 - Volt |10 - Volt | 2 - Temp |10 - Temp |UNDERVOLT 0 - 7
-  3  || 3 - Volt |11 - Volt | 3 - Temp |11 - Temp |UNDERVOLT 8 - 13
-  4  || 4 - Volt |12 - Volt | 4 - Temp |12 - Temp |OVERTEMP  0 - 7
-  5  || 5 - Volt |13 - Volt | 5 - Temp |13 - Temp |OVERTEMP  8 - 13 & OVERCURRENT
+Byte || Packet 0 | Packet 1 | Packet 2 | Packet 3 |       Packet 4 
+-----++----------+----------+----------+----------+-------------------------
+  0  || 0 - Volt | 8 - Volt | 0 - Temp | 8 - Temp |OVERVOLT  0-7
+  1  || 1 - Volt | 9 - Volt | 1 - Temp | 9 - Temp |OVERVOLT  8-13
+  2  || 2 - Volt |10 - Volt | 2 - Temp |10 - Temp |UNDERVOLT 0-7
+  3  || 3 - Volt |11 - Volt | 3 - Temp |11 - Temp |UNDERVOLT 8-13
+  4  || 4 - Volt |12 - Volt | 4 - Temp |12 - Temp |OVERTEMP  0-7
+  5  || 5 - Volt |13 - Volt | 5 - Temp |13 - Temp |OVERTEMP  8-13 & OVERCURRENT
   6  || 6 - Volt |  HS MSB  | 6 - Temp |          |
   7  || 7 - Volt |  HS LSB  | 7 - Temp |          |
+
+The format of Byte 5 of Packet 4
+Bit |    Value
+----+------------
+  0 | Overtemp 8
+  1 | Overtemp 9
+  2 | Overtemp 10
+  3 | Overtemp 11
+  4 | Overtemp 12
+  5 | Overtemp 13
+  6 | don't care
+  7 | Overcurrent
+  
+  
+
+8 9 10 11 12 13 x OC
 
 HS  = Hall sensor
 MSB = Most Significant Byte
