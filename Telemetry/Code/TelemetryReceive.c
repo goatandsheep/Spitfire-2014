@@ -15,6 +15,7 @@
 #use rs232(baud = 115200, parity = N, UART1, bits = 8, ERRORS)
 #use i2c(master, sda = PIN_C4, scl = PIN_C3)
 #define LED PIN_B5
+
 #define MOTOR_CONT_ID 0x400
 #define STATUS_ID         MOTOR_CONT_ID + 1
 #define BUS_ID            MOTOR_CONT_ID + 2

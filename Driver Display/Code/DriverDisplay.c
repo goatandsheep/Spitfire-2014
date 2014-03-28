@@ -18,13 +18,13 @@
 #define LED PIN_C0
 #define RTS PIN_C5
 
-#define LE PIN_C0       // Latch Enable
-#define OE PIN_C1       // Output Enable
+#define LE PIN_C0
+#define OE PIN_C1
 #define BUZZER PIN_C2
 
 #define MOTOR_CONT_ID 0x400
-#define BUS_ID            MOTOR_CONT_ID + 2
-#define VELOCITY_ID       MOTOR_CONT_ID + 3
+#define BUS_ID        MOTOR_CONT_ID + 2
+#define VELOCITY_ID   MOTOR_CONT_ID + 3
 
 //MPPT ID HERE
 
@@ -41,7 +41,10 @@ void getCANData(void);
 void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num);
 uint8 swapNibble(uint8 a);
 
-// LED Driver Bytes
+//LED Driver Bytes
+int driver1[] = {0x00, 0x00};//other lights,Left bar
+int driver2[] = {0x00, 0x00};//Right bar graph,other lights
+int driver3[] = {0x00, 0x00};//Right seg,Left seg
 int barL[] = {0x00,0x01,0x03,0x07,0x0F,0x1F,0x3F,0x7F,0xFF};
 int barR[] = {0x00,0x80,0xC0,0xE0,0xF0,0xF8,0xFC,0xFE,0xFF};
 int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6}; // 0-9
@@ -50,9 +53,8 @@ int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 int8 dial;
 int8 busCurrent[4];
 int8 vehicleSpeed[4];
+float carSpeed;
 int1 BPSWarn[4];
-
-const uint8 pwmPeriod = 255;
 
 void setup(void) {   
     setup_adc(ADC_CLOCK_DIV_32);
@@ -79,6 +81,7 @@ void main() {
         output_low(LE); 
         
         getCANData();
+        memcpy(vehicleSpeed, carSpeed, 4); //convert raw CANBUS data to real values
         //get other data
         //use writeDisplay to display on the driver display
     }
@@ -92,7 +95,7 @@ void getCANData(void) {
     
     if (can_kbhit()) {
         // If data is waiting in buffer...
-        if(can_getd(rx_id, in_data, rx_len, rxstat)) {            
+        if(can_getd(rx_id, in_data, rx_len, rxstat)) {
             switch(rx_id) {
             case BUS_ID:         
                 memcpy(in_data, busCurrent, 4); 
@@ -107,7 +110,7 @@ void getCANData(void) {
                 BPSWarn[3] = in_data[5]&0x01;
                 break;
             }
-        }         
+        }
     }
 }
 
@@ -123,10 +126,10 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) 
     uint8 lSeg;
     uint8 rSeg;
 
-    if (segNum < 0) {
+    if (num < 0) {
         lSeg = segChar[0];      // L
         rSeg = segChar[1];      // O
-    } else if (segNum > 99) {
+    } else if (num > 99) {
         lSeg = segChar[2];      // H
         rSeg = segChar[3];      // I
     } else {
