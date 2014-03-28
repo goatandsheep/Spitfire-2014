@@ -22,6 +22,12 @@
 #define OE PIN_C1
 #define BUZZER PIN_C2
 
+#define MOTOR_CONT_ID 0x400
+#define BUS_ID            MOTOR_CONT_ID + 2
+#define VELOCITY_ID       MOTOR_CONT_ID + 3
+
+//MPPT ID HERE
+
 #define BPS_ID 0x800
 #define BPS_ERROR BPS_ID + 5
 
@@ -31,7 +37,7 @@ typedef unsigned int8 uint8;
 typedef unsigned int16 uint16;
 
 void setup(void);
-void setBPSWarn(void);
+void getCANData(void);
 void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num);
 uint8 swapNibble(uint8 a);
 
@@ -45,10 +51,11 @@ int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6}; // 0-9
 int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
+int8 busCurrent[4];
+int8 vehicleSpeed[4];
 int1 BPSWarn[4];
 
-void setup(void) {
-    
+void setup(void) {   
     setup_adc(ADC_CLOCK_DIV_32);
     setup_adc_ports(sAN10|VSS_VDD);
     set_adc_channel(10);
@@ -61,6 +68,7 @@ void setup(void) {
     can_init();
     set_tris_b((*0xF93 & 0xFB) | 0x08);  //b3 is out, b2 is in (default)
 }
+
 void main() {
     setup();
     
@@ -71,13 +79,13 @@ void main() {
         output_low(OE);
         output_low(LE); 
         
-        setBPSWarn();
+        getCANData();
         //get other data
-        //use writeDisplay to display on the driver disply
+        //use writeDisplay to display on the driver display
     }
 }
 
-void setBPSWarn(void) {
+void getCANData(void) {
     struct rx_stat rxstat;
     int32 rx_id;
     int8 in_data[8];
@@ -86,11 +94,19 @@ void setBPSWarn(void) {
     if (can_kbhit()) {
         // If data is waiting in buffer...
         if(can_getd(rx_id, in_data, rx_len, rxstat)) {            
-            if(rx_id == BPS_ERROR) {
-                    BPSWarn[0] = in_data[0] | in_data[1]&0xFC;
-                    BPSWarn[1] = in_data[2] | in_data[3]&0xFC;
-                    BPSWarn[2] = in_data[4] | in_data[5]&0xFC;
-                    BPSWarn[3] = in_data[5]&0x01;
+            switch(rx_id) {
+            case BUS_ID:         
+                memcpy(in_data, busCurrent, 4); 
+                break;
+            case VELOCITY_ID:
+                memcpy(in_data, vehicleSpeed, 4);
+                break;
+            case BPS_ERROR:
+                BPSWarn[0] = in_data[0] | in_data[1]&0xFC;
+                BPSWarn[1] = in_data[2] | in_data[3]&0xFC;
+                BPSWarn[2] = in_data[4] | in_data[5]&0xFC;
+                BPSWarn[3] = in_data[5]&0x01;
+                break;
             }
         }         
     }
