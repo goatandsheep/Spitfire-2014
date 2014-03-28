@@ -97,8 +97,8 @@ typedef struct HallEffectData {
 
 #use delay(clock = 20000000)
 #use i2c(master, sda = I2C_SDA_PIN, scl = I2C_SCL_PIN)
-#include <can-18F4580_mscp.c>  //CAN library
-#include <flex_lcd_library.c>  //LCD library
+#include <../../Shared/Code/can-18F4580_mscp.c>  //CAN library
+#include <../../Shared/Code/flex_lcd_library.c>  //LCD library
 
 const uint16 updateInterval = 1000; // ms
 const uint8 maxErrorCount = 4;
@@ -333,6 +333,16 @@ uint8 updateSensor(uint8 n) {
     return err;
 }
 
+float rawToVolt(int16 rawVolt) {
+    return (float)rawVolt * 0.0048876;
+}
+float rawToTemp(int16 rawTemp) {
+    return (float)rawTemp/0.12414;
+}
+float rawToCurr(int16 rawCurr) {
+    return ((float)rawCurr - 32685.0) * 0.0014701;
+}
+
 // Send data to LCD
 void LCD_Send(void) {
     char buffer[32];
@@ -343,20 +353,10 @@ void LCD_Send(void) {
     lcd_gotoxy(0,0);
     printf(lcd_putc, buffer);
     sprintf(buffer, "T:%4.1f #%02d, curr=%5.2f", 
-                    rawToTemp(maxTemp), maxTempN, 
-                    rawToCurr(hallSensor.data);
+                    rawToTemp(maxTemp), maxTempNum, 
+                    rawToCurr(hallSensor.data));
     lcd_gotoxy(0,1);
     printf(lcd_putc, buffer);
-}
-
-float rawToVolt(int16 rawVolt) {
-    return (float)rawVolt * 0.0048876;
-}
-float rawToTemp(int16 rawTemp) {
-    return (float)rawTemp/0.12414;
-}
-float rawToCurr(int16 rawCurr) {
-    return ((float)rawCurr - 32685.0) * 0.0014701;
 }
 
 /*

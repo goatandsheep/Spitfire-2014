@@ -98,7 +98,7 @@ can_getd(ID,data,len,stat);
 //
 //    Paramaters:
 //       uint32 id - ID to transmit data as enumerated as:
-//		     RXB0ID,RXB1ID,B0ID,B1ID,B2ID,B3ID,B4ID,B5ID
+//             RXB0ID,RXB1ID,B0ID,B1ID,B2ID,B3ID,B4ID,B5ID
 //       int8* data - pointer to data to send
 //       int8 len - length of data to send
 //       int8 priority - priority of message.  The higher the number, the
@@ -133,7 +133,9 @@ can_getd(ID,data,len,stat);
 #define LED PIN_C0
 #define RTS PIN_C5
 
-#include <can-18F4580_mscp.c>  // Modified CAN library includes default FIFO mode, timing settings match MPPT, 11-bit instead of 24-bit addressing
+// Modified CAN library includes default FIFO mode, timing settings match MPPT,
+// and 11-bit instead of 24-bit addressing
+#include "../../Shared/Code/can-18F4580_mscp.c"  
 
 int16 ms;
 
@@ -171,7 +173,7 @@ void main() {
    enable_interrupts(GLOBAL);       //enable all interrupts
 
    while(TRUE) {
-   	  //every two seconds, send new data if transmit buffer is empty
+         //every two seconds, send new data if transmit buffer is empty
       if (can_tbe() && (ms > 2000)) {
          // resets the timer interupt
          ms=0;
@@ -185,7 +187,7 @@ void main() {
          i=can_putd(tx_id, out_data, tx_len, tx_pri, tx_ext, tx_rtr);
          
          if (i != 0xFF) { 
-         	// if i != 0xFF then success, a transmit buffer was open
+             // if i != 0xFF then success, a transmit buffer was open
             printf("\r\nSENT %U: ID=%3LX LEN=%U ", i, tx_id, tx_len);
             printf("PRI=%U EXT=%U RTR=%U\r\n   DATA = ", tx_pri, tx_ext, tx_rtr);
             

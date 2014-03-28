@@ -31,7 +31,9 @@
 #define BPS_TEMP2 BPS_ID + 3
 #define BPS_ERROR BPS_ID + 4
 
-#include <can-18F4580_mscp.c>  // Modified CAN library includes default FIFO mode, timing settings match MPPT, 11-bit instead of 24-bit addressing
+// Modified CAN library includes default FIFO mode, timing settings match MPPT, 
+// and 11-bit instead of 24-bit addressing
+#include "../../Shared/Codecan-18F4580_mscp.c"
 
 // Typedefs
 typedef unsigned int8 uint8;
@@ -154,4 +156,26 @@ void printData(void) {
     printf("MotorVolt: %4.1f MotorCurr: %4.1f\r\n", motorVoltage, motorCurrent);
     printf("BusVolt: %4.1f BusCurr: %4.1f\r\n", busVoltage, busCurrent);
     printf("MotorTemp: %4.1f BoardTemp: %4.1f IPMTemp: %4.1f\r\n\n", motorTemp, boardTemp, IPMTemp);*/
+}
+
+/*  rawBytesToFloat()
+ *
+ *  i - array of four bytes, in little endian format
+ *
+ *  Returns:
+ *  Floating point value corresponding to the raw bits from i
+ */
+float rawBytesToFloat (const uint8 i[4]) {
+    return 0.0f;
+}
+
+/*  rawBytesToFloat()
+ *
+ *  i - int32, in little endian format
+ *
+ *  Returns:
+ *  Floating point value corresponding to the raw bits from i
+ */
+float rawIntToFloat(const uint32 i) {
+    return 0.0f;
 }

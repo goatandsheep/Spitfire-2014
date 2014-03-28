@@ -18,8 +18,8 @@
 #define LED PIN_C0
 #define RTS PIN_C5
 
-#define LE PIN_C0
-#define OE PIN_C1
+#define LE PIN_C0   // Latch Enable
+#define OE PIN_C1   // Output Enable
 #define BUZZER PIN_C2
 
 #define MOTOR_CONT_ID 0x400
@@ -31,7 +31,9 @@
 #define BPS_ID 0x800
 #define BPS_ERROR BPS_ID + 5
 
-#include <can-18F4580_mscp.c>  // Modified CAN library includes default FIFO mode, timing settings match MPPT, 11-bit instead of 24-bit addressing
+// Modified CAN library includes default FIFO mode, timing settings match MPPT, 
+// and 11-bit instead of 24-bit addressing
+#include <can-18F4580_mscp.c>
 
 typedef unsigned int8 uint8;
 typedef unsigned int16 uint16;
@@ -41,10 +43,7 @@ void getCANData(void);
 void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num);
 uint8 swapNibble(uint8 a);
 
-//LED Driver Bytes
-int driver1[] = {0x00, 0x00};//other lights,Left bar
-int driver2[] = {0x00, 0x00};//Right bar graph,other lights
-int driver3[] = {0x00, 0x00};//Right seg,Left seg
+// Driver LED bytes
 int barL[] = {0x00,0x01,0x03,0x07,0x0F,0x1F,0x3F,0x7F,0xFF};
 int barR[] = {0x00,0x80,0xC0,0xE0,0xF0,0xF8,0xFC,0xFE,0xFF};
 int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6}; // 0-9
@@ -52,9 +51,10 @@ int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
 int8 busCurrent[4];
-int8 vehicleSpeed[4];
+int8 carSpeedRaw[4];
 float carSpeed;
 int1 BPSWarn[4];
+
 
 void setup(void) {   
     setup_adc(ADC_CLOCK_DIV_32);
@@ -75,13 +75,13 @@ void main() {
     
     while(1){
         output_high(RTS);
-        dial = read_adc(); //pot2 is 16bit [0,65535]
+        dial = read_adc(); //pot is 8bit [0,255]
         
         output_low(OE);
         output_low(LE); 
         
         getCANData();
-        memcpy(vehicleSpeed, carSpeed, 4); //convert raw CANBUS data to real values
+        carSpeed = rawBytesToFloat(carSpeedRaw);
         //get other data
         //use writeDisplay to display on the driver display
     }
@@ -93,23 +93,27 @@ void getCANData(void) {
     int8 in_data[8];
     int rx_len;
     
-    if (can_kbhit()) {
-        // If data is waiting in buffer...
-        if(can_getd(rx_id, in_data, rx_len, rxstat)) {
-            switch(rx_id) {
-            case BUS_ID:         
-                memcpy(in_data, busCurrent, 4); 
-                break;
-            case VELOCITY_ID:
-                memcpy(in_data, vehicleSpeed, 4);
-                break;
-            case BPS_ERROR:
-                BPSWarn[0] = in_data[0] | in_data[1]&0xFC;
-                BPSWarn[1] = in_data[2] | in_data[3]&0xFC;
-                BPSWarn[2] = in_data[4] | in_data[5]&0xFC;
-                BPSWarn[3] = in_data[5]&0x01;
-                break;
-            }
+    // If there is no CAN message waiting in the queue, return
+    if (!can_kbhit())
+        return;
+    
+    
+    // If data is waiting in buffer...
+    if(can_getd(rx_id, in_data, rx_len, rxstat)) {
+        switch(rx_id) {
+        case BUS_ID:         
+            memcpy(in_data, busCurrent, 4); 
+            break;
+        case VELOCITY_ID:
+            memcpy(in_data, carSpeedRaw, 4);
+            break;
+        case BPS_ERROR:
+            // See BPS/Documents/Documentation.txt
+            BPSWarn[0] = in_data[0] | in_data[1]&0xFC;  // Over Voltage
+            BPSWarn[1] = in_data[2] | in_data[3]&0xFC;  // Under Voltage
+            BPSWarn[2] = in_data[4] | in_data[5]&0xFC;  // Over Temperature
+            BPSWarn[3] = in_data[5]&0x01;               // Over Current
+            break;
         }
     }
 }
@@ -137,14 +141,14 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) 
         rSeg = segment[num % 10];
     }
 
-    spi_write(misc1);               // Misc lights
-    spi_write(barL[lBarN]);         // Left Bar
-    spi_write(barR[rBarN]);         // Right Bar
-    spi_write(misc2);               // Misc lights
-    spi_write(swapNibble(rSeg));    // Right Seg
-    spi_write(lSeg);                // Left Seg
+    spi_write(misc1);           // Misc lights
+    spi_write(barL[lBarN]);     // Left Bar
+    spi_write(barR[rBarN]);     // Right Bar
+    spi_write(misc2);           // Misc lights
+    spi_write(swapNibble(rSeg));// Right Seg
+    spi_write(lSeg);            // Left Seg
     
-    // What is this and why?
+    // Enable latch momentarily then disable, why?
     output_high(LE);
     delay_ms(1);
     output_low(LE);
@@ -159,4 +163,26 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) 
  */
 uint8 swapNibble(uint8 a) {
     return (a << 4) | ((a >> 4) & 0x0F);
+}
+
+/*  rawBytesToFloat()
+ *
+ *  i - array of four bytes, in little endian format
+ *
+ *  Returns:
+ *  Floating point value corresponding to the raw bits from i
+ */
+float rawBytesToFloat (const uint8 i[4]) {
+    return 0.0f;
+}
+
+/*  rawBytesToFloat()
+ *
+ *  i - int32, in little endian format
+ *
+ *  Returns:
+ *  Floating point value corresponding to the raw bits from i
+ */
+float rawIntToFloat(const uint32 i) {
+    return 0.0f;
 }

@@ -56,7 +56,9 @@
 #define LED PIN_C0
 #define RTS PIN_C5
 
-#include <can-18F4580_mscp.c>  // Modified CAN library includes default FIFO mode, timing settings match MPPT, 11-bit instead of 24-bit addressing
+// Modified CAN library includes default FIFO mode, timing settings match MPPT,
+// and 11-bit instead of 24-bit addressing
+#include "../../Shared/Code/can-18F4580_mscp.c"  
 
 void main() {
    //Use local receive structure for CAN polling receive

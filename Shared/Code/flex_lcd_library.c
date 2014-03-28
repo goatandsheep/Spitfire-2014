@@ -13,19 +13,7 @@
 #define LCD_DB4   PIN_B0
 
 #define LCD_E     PIN_B4
-<<<<<<< HEAD
-#define LCD_RS    PIN_B5
-//#define LCD_RW    PIN_C1
-
-/* If you only want a 6-pin interface to your LCD, then
- * connect the R/W pin on the LCD to ground, and comment
- * out the following line.
- */
-
-//#define USE_LCD_RW   1     
-=======
 #define LCD_RS    PIN_B5 
->>>>>>> FETCH_HEAD
 
 //========================================
 
@@ -41,7 +29,7 @@ int8 const LCD_INIT_STRING[5] = {
     0x06        // Increment Cursor, no shift
     //0x80,       // Display Address 0
     //0x02        // Cursor Home
-}
+};
 
 // ---------------------------------------
 void lcd_send_nibble(int8 nibble) {

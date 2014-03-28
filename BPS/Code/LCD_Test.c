@@ -19,7 +19,7 @@
 //#FUSES NOLVP                    //No low voltage prgming, B3(PIC16) or B5(PIC18) used for I/O
 
 #use delay(clock = 20000000)
-#include <flex_lcd_PROT6.c>
+#include "../../Shared/Codeflex_lcd_PROT6.c"
 
 void main()
 {
