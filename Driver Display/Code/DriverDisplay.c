@@ -18,22 +18,22 @@
 #define LED PIN_C0
 #define RTS PIN_C5
 
-//Defines
 #define LE PIN_C0
 #define OE PIN_C1
 #define BUZZER PIN_C2
 
 #define BPS_ID 0x800
-#define BPS_VOLT1 BPS_ID + 1
-#define BPS_VOLT2 BPS_ID + 2
-#define BPS_TEMP1 BPS_ID + 3
-#define BPS_TEMP2 BPS_ID + 4
 #define BPS_ERROR BPS_ID + 5
 
 #include <can-18F4580_mscp.c>  // Modified CAN library includes default FIFO mode, timing settings match MPPT, 11-bit instead of 24-bit addressing
-// Typedefs
+
 typedef unsigned int8 uint8;
 typedef unsigned int16 uint16;
+
+void setup(void);
+void setBPSWarn(void);
+void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num);
+uint8 swapNibble(uint8 a);
 
 //LED Driver Bytes
 int driver1[] = {0x00, 0x00};//other lights,Left bar
@@ -45,14 +45,9 @@ int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6}; // 0-9
 int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
-
 int1 BPSWarn[4];
 
-void main() {
-    struct rx_stat rxstat;
-    int32 rx_id;
-    int8 in_data[8];
-    int rx_len;
+void setup(void) {
     
     setup_adc(ADC_CLOCK_DIV_32);
     setup_adc_ports(sAN10|VSS_VDD);
@@ -65,46 +60,40 @@ void main() {
     
     can_init();
     set_tris_b((*0xF93 & 0xFB) | 0x08);  //b3 is out, b2 is in (default)
+}
+void main() {
+    setup();
     
     while(1){
         output_high(RTS);
         dial = read_adc(); //pot2 is 16bit [0,65535]
         
         output_low(OE);
-        output_low(LE);
+        output_low(LE); 
         
-        flash(dial);
-        if (can_kbhit()) {
-            // If data is waiting in buffer...
-            if(can_getd(rx_id, in_data, rx_len, rxstat)) {
-                
-                if(rx_id == BPS_ERROR) {
-                    setBPSWarn(in_data);
-                }
-                /** get data from buffer, and place it into the fields: rx_id, in_data, rx_len... etc
-                printf("RECIEVED: BUFF=%U ID=%3LX LEN=%U OVF=%U ", rxstat.buffer, rx_id, rx_len, rxstat.err_ovfl);
-                printf("FILT=%U RTR=%U EXT=%U INV=%U\r\n", rxstat.filthit, rxstat.rtr, rxstat.ext, rxstat.inv);
-                printf("\tDATA = ");
-                for (i=0;i<rx_len;i++)
-                    printf("%02X ", in_data[i]); */
-            } else {
-                
-            }           
-        }                  
+        setBPSWarn();
+        //get other data
+        //use writeDisplay to display on the driver disply
     }
 }
 
-/*  setBPSWarn()
- *
- *  in_data - array of ???
- *
- *  Lun pls comment why?
- */
-void setBPSWarn(int8 in_data[6]) {
-    BPSWarn[0] = in_data[0] | in_data[1]&0xFC;
-    BPSWarn[1] = in_data[2] | in_data[3]&0xFC;
-    BPSWarn[2] = in_data[4] | in_data[5]&0xFC;
-    BPSWarn[3] = in_data[5]&0x01;
+void setBPSWarn(void) {
+    struct rx_stat rxstat;
+    int32 rx_id;
+    int8 in_data[8];
+    int rx_len;
+    
+    if (can_kbhit()) {
+        // If data is waiting in buffer...
+        if(can_getd(rx_id, in_data, rx_len, rxstat)) {            
+            if(rx_id == BPS_ERROR) {
+                    BPSWarn[0] = in_data[0] | in_data[1]&0xFC;
+                    BPSWarn[1] = in_data[2] | in_data[3]&0xFC;
+                    BPSWarn[2] = in_data[4] | in_data[5]&0xFC;
+                    BPSWarn[3] = in_data[5]&0x01;
+            }
+        }         
+    }
 }
 
 /*  writeDisplay()
@@ -153,7 +142,3 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) 
 uint8 swapNibble(uint8 a) {
     return (a << 4) | ((a >> 4) & 0x0F);
 }
-
-
-
-
