@@ -33,7 +33,9 @@
 
 // Modified CAN library includes default FIFO mode, timing settings match MPPT, 
 // and 11-bit instead of 24-bit addressing
-#include "../../Shared/Codecan-18F4580_mscp.c"
+#include "../../Shared/Code/can-18F4580_mscp.c"
+#include "../../Shared/Code/float_util.c"
+
 
 // Typedefs
 typedef unsigned int8 uint8;
@@ -89,52 +91,53 @@ void getData(void) {
     unsigned int8 in_data[8]; //Data fields can have up to 8 bytes, byte range is from 0 to 255
     int rx_len;
     
-    // This is the polling receive routine
-    if (can_kbhit()) {
-        // If data is waiting in buffer...
-        if(can_getd(rx_id, in_data, rx_len, rxstat)) {   
-            switch(rx_id) {
-            //Motor Controller Packets
-            case STATUS_ID:
-                memcpy(in_data, statusData, 8);           
-                break;
-            case BUS_ID:
-                memcpy(in_data, busData, 8);
-                break;
-            case VELOCITY_ID:
-                memcpy(in_data, motorSpeed, 4);
-                break;
-            case IPM_MOTOR_TEMP_ID:
-                memcpy(in_data, motorIPMTempData, 8);
-                break;
-            case BOARD_TEMP_ID:
-                memcpy(in_data, boardTempData, 4);
-                break;
-            case ODOMETER_ID:
-                memcpy(in_data, odometerData, 4);
-                break;
-            
-            //BPS Packets
-            case BPS_VOLT1:
-                memcpy(in_data, BPSVolt, 8);
-                break;
-            case BPS_VOLT2:
-                memcpy(in_data, &BPSVolt[8], 6);
-                memcpy(&in_data[6], BPSCurr, 2);
-                break;
-            case BPS_TEMP1:
-                memcpy(in_data, BPSTemp, 8);
-                break;
-            case BPS_TEMP2:
-                memcpy(in_data, &BPSTemp[8], 6);
-                break;
-            case BPS_ERROR:
-                memcpy(in_data, BPSError, 6);
-                break;
-            }               
-        } else {
-            printf("FAIL on can_getd\r\n");
-        }      
+    // If there is no CAN message waiting in the buffer, do nothing
+    if (can_kbhit())
+        return;
+    
+    // If data is waiting in buffer...
+    if(can_getd(rx_id, in_data, rx_len, rxstat)) {   
+        switch(rx_id) {
+        //Motor Controller Packets
+        case STATUS_ID:
+            memcpy(statusData, in_data, 8);           
+            break;
+        case BUS_ID:
+            memcpy(busData, in_data, 8);
+            break;
+        case VELOCITY_ID:
+            memcpy(motorSpeed, in_data, 4);
+            break;
+        case IPM_MOTOR_TEMP_ID:
+            memcpy(motorIPMTempData, in_data, 8);
+            break;
+        case BOARD_TEMP_ID:
+            memcpy(boardTempData, in_data, 4);
+            break;
+        case ODOMETER_ID:
+            memcpy(odometerData, in_data, 4);
+            break;
+        
+        //BPS Packets
+        case BPS_VOLT1:
+            memcpy(BPSVolt, in_data, 8);
+            break;
+        case BPS_VOLT2:
+            memcpy(&BPSVolt[8], in_data, 6);
+            memcpy(BPSCurr, &in_data[6], 2);
+            break;
+        case BPS_TEMP1:
+            memcpy(BPSTemp, in_data, 8);
+            break;
+        case BPS_TEMP2:
+            memcpy(&BPSTemp[8], in_data, 6);
+            break;
+        case BPS_ERROR:
+            memcpy(BPSError, in_data, 6);
+            break;
+        }               
+    } else {
+        printf("FAIL on can_getd\r\n");
     }
 }
 
@@ -156,26 +159,4 @@ void printData(void) {
     printf("MotorVolt: %4.1f MotorCurr: %4.1f\r\n", motorVoltage, motorCurrent);
     printf("BusVolt: %4.1f BusCurr: %4.1f\r\n", busVoltage, busCurrent);
     printf("MotorTemp: %4.1f BoardTemp: %4.1f IPMTemp: %4.1f\r\n\n", motorTemp, boardTemp, IPMTemp);*/
-}
-
-/*  rawBytesToFloat()
- *
- *  i - array of four bytes, in little endian format
- *
- *  Returns:
- *  Floating point value corresponding to the raw bits from i
- */
-float rawBytesToFloat (const uint8 i[4]) {
-    return 0.0f;
-}
-
-/*  rawBytesToFloat()
- *
- *  i - int32, in little endian format
- *
- *  Returns:
- *  Floating point value corresponding to the raw bits from i
- */
-float rawIntToFloat(const uint32 i) {
-    return 0.0f;
 }

@@ -33,7 +33,8 @@
 
 // Modified CAN library includes default FIFO mode, timing settings match MPPT, 
 // and 11-bit instead of 24-bit addressing
-#include <can-18F4580_mscp.c>
+#include "../../Shared/Code/can-18F4580_mscp.c"
+#include "../../Shared/Code/float_util.c"
 
 typedef unsigned int8 uint8;
 typedef unsigned int16 uint16;
@@ -81,7 +82,7 @@ void main() {
         output_low(LE); 
         
         getCANData();
-        carSpeed = rawBytesToFloat(carSpeedRaw);
+        IEEERawToFloat(carSpeedRaw, carSpeed);
         //get other data
         //use writeDisplay to display on the driver display
     }
@@ -163,26 +164,4 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) 
  */
 uint8 swapNibble(uint8 a) {
     return (a << 4) | ((a >> 4) & 0x0F);
-}
-
-/*  rawBytesToFloat()
- *
- *  i - array of four bytes, in little endian format
- *
- *  Returns:
- *  Floating point value corresponding to the raw bits from i
- */
-float rawBytesToFloat (const uint8 i[4]) {
-    return 0.0f;
-}
-
-/*  rawBytesToFloat()
- *
- *  i - int32, in little endian format
- *
- *  Returns:
- *  Floating point value corresponding to the raw bits from i
- */
-float rawIntToFloat(const uint32 i) {
-    return 0.0f;
 }
