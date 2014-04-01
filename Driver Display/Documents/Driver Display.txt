@@ -14,6 +14,13 @@ LEFT DIGIT   RIGHT DIGIT
  3    1        7    5
   2222  0       6666  4
 
- Not that bits [0-3] and [4-7] are swapped between the right and left digits.
- This is due to the design of the board and how the seven segment displays are
- wired up.
+Note that bits [0-3] and [4-7] are swapped between the right and left digits.
+This is due to the design of the board and how the seven segment displays are
+wired up.
+
+
+Bottom lights:
+LED19 = misc2 & 0x01
+LED20 = misc2 & 0x02
+LED21 = misc1 & 0x40
+LED22 = misc1 & 0x80

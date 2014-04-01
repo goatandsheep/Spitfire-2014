@@ -16,7 +16,7 @@ we found raw values from a few floating point numbers:
  2.0 | 40 00 00 00 | 80 00 00 00
 -2.0 | C0 00 00 00 | 80 80 00 00
  0.5 | 3F 00 00 00 | 7E 00 00 00
--0.5 | BF 00 00 00 | 7E 00 00 00
+-0.5 | BF 00 00 00 | 7E 80 00 00
 
 IEEE Floating point representation:
  1 Sign bit
