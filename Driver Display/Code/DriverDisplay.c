@@ -41,7 +41,7 @@ typedef unsigned int16 uint16;
 
 void setup(void);
 void getCANData(void);
-void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num);
+void writeDisplay(uint8 lBarN, uint8 rBarN, int8 bottomLEDs[4], signed int8 num);
 uint8 swapNibble(uint8 a);
 
 // Driver LED bytes
@@ -51,11 +51,13 @@ int segment[] = {0xEE,0x82,0xDC,0xD6,0xB2,0x76,0x7E,0xC2,0xFE,0xF6}; // 0-9
 int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
-int8 busCurrent[4];
-int8 carSpeedRaw[4];
+float busCurrent;
 float carSpeed;
-int1 BPSWarn[4];
+int8 BPSWarn[4];
 
+uint8 leftBar = 0, rightBar = 0;
+int8 misc[4] = {1, 0, 1, 1};
+uint8 segmentNum = 0;
 
 void setup(void) {   
     setup_adc(ADC_CLOCK_DIV_32);
@@ -72,6 +74,7 @@ void setup(void) {
 }
 
 void main() {
+    int i;
     setup();
     
     while(1){
@@ -81,14 +84,22 @@ void main() {
         output_low(OE);
         output_low(LE); 
         
-        getCANData();
-        IEEERawToFloat(carSpeedRaw, carSpeed);
-        //get other data
-        //use writeDisplay to display on the driver display
-    }
+        //if (getCANData())
+        //    writeDisplay(mpptIn, motorOut, BPSWarn, (int)carSpeed);
+        
+        writeDisplay(leftBar,rightBar,misc,segmentNum);
+        segmentNum = ++segmentNum%10;
+        
+        for (i = 0; i < 100; i++) {
+            output_low(OE);
+            delay_us(100);
+            output_high(OE);
+            delay_us(3000);
+        }
+   }
 }
 
-void getCANData(void) {
+int getCANData(void) {
     struct rx_stat rxstat;
     int32 rx_id;
     int8 in_data[8];
@@ -96,17 +107,18 @@ void getCANData(void) {
     
     // If there is no CAN message waiting in the queue, return
     if (!can_kbhit())
-        return;
-    
+        return 0;
     
     // If data is waiting in buffer...
     if(can_getd(rx_id, in_data, rx_len, rxstat)) {
         switch(rx_id) {
-        case BUS_ID:         
-            memcpy(in_data, busCurrent, 4); 
+        case BUS_ID:
+            IEEERawToFloat(in_data, busCurrent);
+            
             break;
         case VELOCITY_ID:
-            memcpy(in_data, carSpeedRaw, 4);
+            IEEERawToFloat(in_data, carSpeed);
+            carSpeed *= 3.6;    // convert m/s to km/h
             break;
         case BPS_ERROR:
             // See BPS/Documents/Documentation.txt
@@ -117,20 +129,26 @@ void getCANData(void) {
             break;
         }
     }
+    
+    return 1;
 }
 
 /*  writeDisplay()
  *
- *  barL    - number between 0 and 8 inclusive
- *  barR    - number between 0 and 8 inclusive
- *  misc1   - misc lights on top
- *  misc2   - misc lights on bottom
- *  num     - number to be displayed on the 7SD
+ *  barL       - number between 0 and 8 inclusive
+ *  barR       - number between 0 and 8 inclusive
+ *  bottomLEDs - four misc lights on bottom
+ *  num        - number to be displayed on the 7+1 segment display
  */
-void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) {
+void writeDisplay(uint8 lBarN, uint8 rBarN, int8 bottomLEDs[4], signed int8 num) {
     uint8 lSeg;
     uint8 rSeg;
-
+    int8 bot = 0;
+    bot |= ((bottomLEDs[0]&1) << 7);
+    bot |= ((bottomLEDs[1]&1) << 6);
+    bot |= ((bottomLEDs[2]&1) << 1);
+    bot |=  (bottomLEDs[3]&1);
+    
     if (num < 0) {
         lSeg = segChar[0];      // L
         rSeg = segChar[1];      // O
@@ -142,12 +160,13 @@ void writeDisplay(uint8 lBarN, uint8 rBarN, uint8 misc1, uint8 misc2, int8 num) 
         rSeg = segment[num % 10];
     }
 
-    spi_write(misc1);           // Misc lights
-    spi_write(barL[lBarN]);     // Left Bar
-    spi_write(barR[rBarN]);     // Right Bar
-    spi_write(misc2);           // Misc lights
-    spi_write(swapNibble(rSeg));// Right Seg
-    spi_write(lSeg);            // Left Seg
+    
+    spi_write(bot);                 // 2 Bottom Left LEDs
+    spi_write(barL[lBarN]);         // Left Bar
+    spi_write(barR[rBarN]);         // Right Bar
+    spi_write(bot);                 // 2 Bottom Right LEDs
+    spi_write(swapNibble(rSeg));    // Right Seg
+    spi_write(lSeg);                // Left Seg
     
     // Enable latch momentarily then disable, why?
     output_high(LE);
