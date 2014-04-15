@@ -52,6 +52,7 @@ int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 
 int8 dial;
 float busCurrent;
+float busVoltage;
 float carSpeed;
 int8 BPSWarn[4];
 
@@ -71,6 +72,11 @@ void setup(void) {
     
     can_init();
     set_tris_b((*0xF93 & 0xFB) | 0x08);  //b3 is out, b2 is in (default)
+    
+    //output_low(OE);
+    //output_low(LE);
+    //setup_ccp2(OE);  // Configure CCP2 as a PWM 
+    //setup_power_pwm_pins(PWM_OFF, PWN_ON, PWM_OFF, PWM_OFF);
 }
 
 void main() {
@@ -79,11 +85,12 @@ void main() {
     
     while(1){
         output_high(RTS);
-        dial = read_adc(); //pot is 8bit [0,255]
+        dial = read_adc(); //potentiometer is 8bit [0,255]
+        
         
         output_low(OE);
-        output_low(LE); 
-        
+        output_low(LE);
+        //set_pwm2_duty(dial%100);
         //if (getCANData())
         //    writeDisplay(mpptIn, motorOut, BPSWarn, (int)carSpeed);
         
@@ -113,11 +120,11 @@ int getCANData(void) {
     if(can_getd(rx_id, in_data, rx_len, rxstat)) {
         switch(rx_id) {
         case BUS_ID:
-            IEEERawToFloat(in_data, busCurrent);
-            
+            busCurrent = IEEERawToFloat(&in_data[0]);
+            busVoltage = IEEERawToFloat(&in_data[4]);
             break;
         case VELOCITY_ID:
-            IEEERawToFloat(in_data, carSpeed);
+            carSpeed = IEEERawToFloat(&in_data[0]);
             carSpeed *= 3.6;    // convert m/s to km/h
             break;
         case BPS_ERROR:

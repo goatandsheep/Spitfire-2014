@@ -34,8 +34,6 @@
 // Modified CAN library includes default FIFO mode, timing settings match MPPT, 
 // and 11-bit instead of 24-bit addressing
 #include "../../Shared/Code/can-18F4580_mscp.c"
-#include "../../Shared/Code/float_util.c"
-
 
 // Typedefs
 typedef unsigned int8 uint8;
@@ -46,7 +44,7 @@ uint16 ms = 0;
 
 uint8 statusData[8];
 uint8 busData[8];
-uint8 motorSpeed[4];
+uint8 motorData[4];
 uint8 motorIPMTempData[8];
 uint8 boardTempData[4];
 uint8 odometerData[4];
@@ -67,6 +65,7 @@ void isr_timer2(void) {
 }
 
 void main(void) {
+   uint8 tempswap;
    setup_timer_2(T2_DIV_BY_4,79,16);    //setup up timer2 to interrupt every 1ms if using 20Mhz clock
    enable_interrupts(INT_TIMER2);   //enable timer2 interrupt (if want to count ms)
    enable_interrupts(GLOBAL);       //enable all interrupts
@@ -78,13 +77,13 @@ void main(void) {
         getData();
         if(ms>1000) {
             ms = 0;
-            getTemp();
-            printData();
+            //getTemp();
+
+            //printData();
         }
    }
-}  
+}
 void getData(void) {
-    int i;
     //Use local receive structure for CAN polling receive
     struct rx_stat rxstat;
     int32 rx_id;
@@ -92,11 +91,11 @@ void getData(void) {
     int rx_len;
     
     // If there is no CAN message waiting in the buffer, do nothing
-    if (can_kbhit())
+    if (!can_kbhit())
         return;
     
     // If data is waiting in buffer...
-    if(can_getd(rx_id, in_data, rx_len, rxstat)) {   
+    if(can_getd(rx_id, in_data, rx_len, rxstat)) {
         switch(rx_id) {
         //Motor Controller Packets
         case STATUS_ID:
@@ -106,7 +105,7 @@ void getData(void) {
             memcpy(busData, in_data, 8);
             break;
         case VELOCITY_ID:
-            memcpy(motorSpeed, in_data, 4);
+            memcpy(motorData, in_data, 4);
             break;
         case IPM_MOTOR_TEMP_ID:
             memcpy(motorIPMTempData, in_data, 8);
@@ -137,7 +136,7 @@ void getData(void) {
             break;
         }               
     } else {
-        printf("FAIL on can_getd\r\n");
+        //printf("FAIL on can_getd\r\n");
     }
 }
 
@@ -155,8 +154,9 @@ int8 getTemp(void) {
 }
 
 void printData(void) {
-   /* printf("MotorSpeed: %4.1f VehicleSpeed: %4.1f\r\n", motorSpeed, vehicleSpeed);
-    printf("MotorVolt: %4.1f MotorCurr: %4.1f\r\n", motorVoltage, motorCurrent);
+    output_toggle(PIN_C0);
+    
+    printf("VehicleSpeed: %4.1f\r\n", vehicleSpeed);
     printf("BusVolt: %4.1f BusCurr: %4.1f\r\n", busVoltage, busCurrent);
-    printf("MotorTemp: %4.1f BoardTemp: %4.1f IPMTemp: %4.1f\r\n\n", motorTemp, boardTemp, IPMTemp);*/
+    printf("MotorTemp: %4.1f BoardTemp: %4.1f IPMTemp: %4.1f\r\n\n", motorTemp, boardTemp, IPMTemp);
 }

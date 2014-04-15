@@ -39,9 +39,15 @@ float rawToFloat(unsigned int8 *raw) {
  * raw - four bytes, converted from IEEE754 representation into microchip
  *          floating point representation
  */
-void IEEERawToRaw(unsigned int8 *raw) {
-    int1 sign =  bit_test(raw[0], 7);
-    int1 lsb = bit_test(raw[1], 7);
+void IEEERawToRaw(unsigned int8 *IEEEraw, unsigned int8 *raw) {
+    int1 sign =  bit_test(IEEEraw[3], 7);
+    int1 lsb = bit_test(IEEEraw[2], 7);
+    
+    raw[0] = IEEEraw[3];
+    raw[1] = IEEEraw[2];
+    raw[2] = IEEEraw[1];
+    raw[3] = IEEEraw[0];
+
     raw[0] = (raw[0] << 1) | lsb;
     raw[1] = (raw[1]&0x7F) | (sign << 7);
 }
@@ -54,10 +60,15 @@ void IEEERawToRaw(unsigned int8 *raw) {
  * PIC uses the microchip floating point representation internally, so it
  * doesn't make sense to store the raw value any other way.
  */
-void IEEERawToFloat(unsigned int8 *raw, float f) {
-    // Load raw binary
-    memcpy(raw, &f, 4);
-    
+float IEEERawToFloat(unsigned int8 *raw) {
+    unsigned int8 temp[4];
+    float f;
+
     // Swap sign and exponent
-    IEEERawToRaw(raw);
+    IEEERawToRaw(raw, temp);
+    
+    // Load raw binary
+    memcpy(&f, &temp, 4);
+    
+    return f;
 }
