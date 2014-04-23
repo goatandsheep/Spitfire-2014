@@ -84,10 +84,10 @@ void main() {
     setup();
     
     while(1){
-        output_high(RTS);
+        output_high(RTS);       
         dial = read_adc(); //potentiometer is 8bit [0,255]
         
-        
+        output_toggle(BUZZER);
         output_low(OE);
         output_low(LE);
         //set_pwm2_duty(dial%100);
