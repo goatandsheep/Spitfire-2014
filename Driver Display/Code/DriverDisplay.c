@@ -53,8 +53,12 @@ int segChar[] = {0x2C,0xEE,0xBA,0x82}; // L, O, H, I
 int8 dial;
 float busCurrent;
 float busVoltage;
-float carSpeed;
+float motorRPM;
 int8 BPSWarn[4];
+
+int8 inputPower;
+int8 outputPower;
+int8 carSpeed;
 
 uint8 leftBar = 0, rightBar = 0;
 int8 misc[4] = {1, 0, 1, 1};
@@ -94,6 +98,8 @@ void main() {
         //if (getCANData())
         //    writeDisplay(mpptIn, motorOut, BPSWarn, (int)carSpeed);
         
+        //leftBar = //MPPT input;
+        rightBar = outputPower % 8;
         writeDisplay(leftBar,rightBar,misc,segmentNum);
         segmentNum = ++segmentNum%10;
         
@@ -122,10 +128,11 @@ int getCANData(void) {
         case BUS_ID:
             busCurrent = IEEERawToFloat(&in_data[0]);
             busVoltage = IEEERawToFloat(&in_data[4]);
+            outputPower = (int8)busCurrent * (int8)busVoltage;
             break;
         case VELOCITY_ID:
-            carSpeed = IEEERawToFloat(&in_data[0]);
-            carSpeed *= 3.6;    // convert m/s to km/h
+            motorRPM = IEEERawToFloat(&in_data[4]);
+            carSpeed = (int8)motorRPM * 50;
             break;
         case BPS_ERROR:
             // See BPS/Documents/Documentation.txt
