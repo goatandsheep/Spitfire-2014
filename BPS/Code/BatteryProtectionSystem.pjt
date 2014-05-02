@@ -48,7 +48,7 @@ Count=1
 2=can-18F4580_mscp.c
 [Opened Files]
 1=BatteryProtectionSystem.c
-2=
+2=..\..\Shared\Code\..\..\Shared\Code\flex_lcd_library.c
 3=
 4=
 5=
