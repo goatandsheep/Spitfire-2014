@@ -26,7 +26,7 @@
 #define BUS_ID        MOTOR_CONT_ID + 2
 #define VELOCITY_ID   MOTOR_CONT_ID + 3
 
-//MPPT ID HERE
+#define MPPT_ID       0x600
 
 #define BPS_ID 0x800
 #define BPS_ERROR BPS_ID + 5
@@ -55,6 +55,9 @@ float busCurrent;
 float busVoltage;
 float motorRPM;
 int8 BPSWarn[4];
+
+float mpptCurrent;
+float mpptVoltage;
 
 int8 inputPower;
 int8 outputPower;
@@ -133,6 +136,9 @@ int getCANData(void) {
         case VELOCITY_ID:
             motorRPM = IEEERawToFloat(&in_data[4]);
             carSpeed = (int8)motorRPM * 50;
+            break;
+        case MPPT_ID:
+            
             break;
         case BPS_ERROR:
             // See BPS/Documents/Documentation.txt
