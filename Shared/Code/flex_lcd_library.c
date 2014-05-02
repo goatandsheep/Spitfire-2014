@@ -7,6 +7,7 @@
  * code, and that it may be freely used by others without restriction."
  */
 
+#ifndef CUSTOM_PINS
 #define LCD_DB5   PIN_B3
 #define LCD_DB7   PIN_B2
 #define LCD_DB6   PIN_B1
@@ -14,6 +15,7 @@
 
 #define LCD_E     PIN_B4
 #define LCD_RS    PIN_B5 
+#endif
 
 //========================================
 
