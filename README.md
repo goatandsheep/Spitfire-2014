@@ -9,4 +9,6 @@ This is the link to the main Solar Car website: http://www.macsolarcar.com/
 
 If you are new to GitHub, don't fret-we have included a tutorial on how to use it: http://goo.gl/4RcD2u
 
+Note: [.md](https://en.wikipedia.org/wiki/Markdown) files can be opened like .txt files, but look cool up on GitHub
+
 Target Release date: End of February, 2014
