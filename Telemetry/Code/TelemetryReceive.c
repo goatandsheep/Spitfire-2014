@@ -153,10 +153,10 @@ int8 getTemp(void) {
     return(temp);
 }
 
-void printData(void) {
+/**void printData(void) {
     output_toggle(PIN_C0);
     
     printf("VehicleSpeed: %4.1f\r\n", vehicleSpeed);
     printf("BusVolt: %4.1f BusCurr: %4.1f\r\n", busVoltage, busCurrent);
     printf("MotorTemp: %4.1f BoardTemp: %4.1f IPMTemp: %4.1f\r\n\n", motorTemp, boardTemp, IPMTemp);
-}
+}8?
